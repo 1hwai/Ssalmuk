@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KataNet engine bridge</title>
+</head>
+<body>
+  <div id="controls"></div>
+  <div id="goban"></div>
+  <div id="stats"></div>
+
+  <!-- Neural-network runtime and Go rules are loaded from the original open-source project. -->
+  <script src="https://maksimkorzh.github.io/go/js/tensorflow.js"></script>
+  <script>
+    function gameMovesBlack() { return []; }
+    function gameMovesWhite() { return []; }
+  </script>
+  <script src="https://maksimkorzh.github.io/go/js/goban.js"></script>
+  <script src="https://maksimkorzh.github.io/go/js/gui.js"></script>
+  <script>
+    "use strict";
+
+    function kataOffset(boardSize) {
+      return Math.floor((19 - boardSize) / 2);
+    }
+
+    function kataInternalPoint(x, y, boardSize) {
+      const offset = kataOffset(boardSize);
+      return (y + offset + 1) * 21 + (x + offset + 1);
+    }
+
+    function kataSaveEngineState() {
+      return {
+        board: board.slice(),
+        moveHistory: moveHistory.slice(),
+        side,
+        ko,
+        userMove,
+        moveCount,
+        liberties: liberties.slice(),
+        block: block.slice()
+      };
+    }
+
+    function kataRestoreEngineState(saved) {
+      board = saved.board;
+      moveHistory = saved.moveHistory;
+      side = saved.side;
+      ko = saved.ko;
+      userMove = saved.userMove;
+      moveCount = saved.moveCount;
+      liberties = saved.liberties;
+      block = saved.block;
+    }
+
+    function kataIsLegal(point) {
+      if (board[point] !== EMPTY || point === ko) return false;
+      const saved = kataSaveEngineState();
+      const legal = setStone(point, side, false);
+      kataRestoreEngineState(saved);
+      return legal;
+    }
+
+    window.kataReset = function() {
+      size = 21;
+      komi = 6.5;
+      initGoban();
+      level = 0;
+      return true;
+    };
+
+    window.kataPlace = function(x, y, color, boardSize) {
+      const engineColor = color === 1 ? BLACK : WHITE;
+      if (side !== engineColor) return false;
+      return setStone(kataInternalPoint(x, y, boardSize), engineColor, false);
+    };
+
+    window.kataPass = function() {
+      passMove();
+      return true;
+    };
+
+    window.kataChooseMove = async function(boardSize, difficulty) {
+      if (!danModel || !kyuModel) throw new Error("KataNet models are not ready.");
+      level = (difficulty === "advanced" || difficulty === "expert") ? 1 : 0;
+      globalInputs.fill(0);
+
+      const binaryInput = inputTensor();
+      const binaryTensor = tf.tensor(binaryInput, [1, 361, 22], "float32");
+      const globalTensor = tf.tensor(globalInputs, [1, 19], "float32");
+      let results = [];
+      let slicedPolicy = null;
+
+      try {
+        const model = await (level ? danModel : kyuModel);
+        results = await model.executeAsync({
+          "swa_model/bin_inputs": binaryTensor,
+          "swa_model/global_inputs": globalTensor
+        });
+        const policyTensor = level ? results[1] : results[3];
+        slicedPolicy = policyTensor.slice([0, 0, 0], [1, 1, 361]);
+        const policy = (await slicedPolicy.array())[0][0];
+        const offset = kataOffset(boardSize);
+        const candidates = [];
+
+        for (let y = 0; y < boardSize; y++) {
+          for (let x = 0; x < boardSize; x++) {
+            const point = kataInternalPoint(x, y, boardSize);
+            if (!kataIsLegal(point)) continue;
+            const modelX = x + offset;
+            const modelY = y + offset;
+            const probability = policy[modelY * 19 + modelX];
+            if (Number.isFinite(probability)) candidates.push({ x, y, probability });
+          }
+        }
+
+        if (!candidates.length) return null;
+        candidates.sort((a, b) => b.probability - a.probability);
+        const topCount = difficulty === "beginner" ? 12
+          : difficulty === "intermediate" ? 5
+          : difficulty === "advanced" ? 2 : 1;
+        const pool = candidates.slice(0, Math.min(topCount, candidates.length));
+        return pool[Math.floor(Math.random() * pool.length)] && (() => {
+          const choice = pool[Math.floor(Math.random() * pool.length)];
+          return { x: choice.x, y: choice.y };
+        })();
+      } finally {
+        if (slicedPolicy) slicedPolicy.dispose();
+        for (const result of results) if (result && typeof result.dispose === "function") result.dispose();
+        binaryTensor.dispose();
+        globalTensor.dispose();
+      }
+    };
+  </script>
+</body>
+</html>
