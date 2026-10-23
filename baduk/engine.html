@@ -15,6 +15,9 @@
   <script>
     function gameMovesBlack() { return []; }
     function gameMovesWhite() { return []; }
+    tf.setBackend("webgl").then(() => {
+      if (tf.getBackend() !== "webgl") tf.setBackend("cpu");
+    }).catch(() => tf.setBackend("cpu"));
   </script>
   <script src="https://maksimkorzh.github.io/go/js/goban.js"></script>
   <script src="https://maksimkorzh.github.io/go/js/gui.js"></script>
