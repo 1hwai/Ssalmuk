@@ -11,7 +11,7 @@
 - 게임 실행 시 별도 패키지 설치 불필요 (배포용 난독화 빌드는 npm 사용)
 
 ## 실행
-오목은 `index.html`을 브라우저에서 직접 열어도 된다. 바둑 신경망 AI는 iframe 출처 보안 때문에 로컬 HTTP 서버에서 실행해야 한다. 저장소 루트에서 `python3 -m http.server 8000`을 실행한 뒤 `http://localhost:8000/` 또는 `http://localhost:8000/baduk/`으로 접속한다. 패키지 설치나 빌드는 필요 없다.
+오목은 `index.html`을 브라우저에서 직접 열어도 된다. 바둑 AI는 iframe 출처 보안 때문에 로컬 HTTP 서버에서 실행해야 한다. 저장소 루트에서 `python3 -m http.server 8000`을 실행한 뒤 `http://localhost:8000/` 또는 `http://localhost:8000/baduk/`으로 접속한다. 패키지 설치나 빌드는 필요 없다.
 
 ## Cloudflare Pages 배포
 Cloudflare Pages 프로젝트 설정에서 다음과 같이 지정한다.
