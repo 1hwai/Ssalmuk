@@ -14,7 +14,16 @@
 오목은 `index.html`을 브라우저에서 직접 열어도 된다. 바둑 신경망 AI는 iframe 출처 보안 때문에 로컬 HTTP 서버에서 실행해야 한다. 저장소 루트에서 `python3 -m http.server 8000`을 실행한 뒤 `http://localhost:8000/` 또는 `http://localhost:8000/baduk/`으로 접속한다. 패키지 설치나 빌드는 필요 없다.
 
 ## Cloudflare Pages 배포
-저장소 전체가 아니라 `ssalmuk` 폴더만 별도 프로젝트로 배포하려면 Cloudflare Pages의 **Root directory**를 `ssalmuk`으로 설정한다. 프레임워크는 None, 빌드 명령은 비워 두고, 출력 디렉터리는 `/` 또는 대시보드가 요구하는 기본값으로 설정한다.
+Cloudflare Pages 프로젝트 설정에서 다음과 같이 지정한다.
+
+- **Framework preset:** None
+- **Build command:** `npm run build`
+- **Build output directory:** `dist`
+- **Root directory:** 저장소 루트
+
+빌드 과정은 원본 HTML/CSS/JS를 `dist/`로 복사하고, 직접 작성한 JavaScript 세 파일(`game.js`, `baduk/game.js`, `baduk/engine.js`)만 `javascript-obfuscator`로 난독화한다. 원본 파일은 수정하지 않으며 `dist/`와 `node_modules/`는 Git에 커밋하지 않는다. GitHub에 push하면 Pages가 의존성을 설치하고 배포용 파일을 새로 생성한다.
+
+난독화는 코드 분석을 어렵게 할 뿐 암호화나 완전한 복제 방지는 아니다. 외부 라이브러리인 TensorFlow.js는 CDN에서 그대로 로드한다.
 
 현재 버전은 정적 프런트엔드 프로토타입이다. 광고 코드는 아직 없고, 광고 수익이나 검색 유입은 보장되지 않는다. 공개 전에 실제 기기에서 게임 동작과 모바일 화면을 확인할 것.
 
