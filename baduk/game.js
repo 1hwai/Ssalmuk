@@ -219,7 +219,7 @@
     else if (state.mode === "ai" && state.turn !== state.humanColor) statusDetail.textContent = "AI 대국 중";
     else statusDetail.textContent = "교차점을 선택하여 착수하십시오.";
     moveCount.textContent = state.moveCount + "수";
-    undoButton.disabled = state.past.length === 0 || state.aiThinking;
+    undoButton.disabled = state.past.length === 0 || state.aiThinking || (state.mode === "ai" && state.moveCount < (state.humanColor === BLACK ? 2 : 3));
     passButton.disabled = state.finished || state.aiThinking || isAiTurn();
     if (!state.finished) resultPanel.hidden = true;
   }
@@ -278,6 +278,7 @@
       }
     }
     if (!choices.length) return -1;
+    if (state.moveCount > state.size * 0.7 && best < 1.5) return -1;
     return choices[Math.floor(Math.random() * choices.length)];
   }
 
