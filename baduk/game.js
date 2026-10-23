@@ -127,8 +127,11 @@
       const started = Date.now();
       function poll() {
         const engine = engineFrame.contentWindow;
-        if (engine && typeof engine.kataChooseMove === "function" && typeof engine.kataReset === "function" && engine.danModel && engine.kyuModel) {
-          resolve(engine);
+        if (engine && typeof engine.kataChooseMove === "function" && typeof engine.kataReset === "function" && typeof engine.kataLoad === "function") {
+          engine.kataLoad().then(() => resolve(engine)).catch(error => {
+            engineLoadPromise = null;
+            reject(error);
+          });
           return;
         }
         if (Date.now() - started > 180000) {
