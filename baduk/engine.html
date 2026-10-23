@@ -121,10 +121,8 @@
           : difficulty === "intermediate" ? 5
           : difficulty === "advanced" ? 2 : 1;
         const pool = candidates.slice(0, Math.min(topCount, candidates.length));
-        return pool[Math.floor(Math.random() * pool.length)] && (() => {
-          const choice = pool[Math.floor(Math.random() * pool.length)];
-          return { x: choice.x, y: choice.y };
-        })();
+        const choice = pool[Math.floor(Math.random() * pool.length)];
+        return { x: choice.x, y: choice.y };
       } finally {
         if (slicedPolicy) slicedPolicy.dispose();
         for (const result of results) if (result && typeof result.dispose === "function") result.dispose();
