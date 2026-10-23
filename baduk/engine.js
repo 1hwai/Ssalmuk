@@ -4,39 +4,31 @@
   const EMPTY = 0;
   const BLACK = 1;
   const WHITE = -1;
-  const OFFBOARD = 2;
-  const STRIDE = 21;
-  const KOMI = 6.5;
-  const MODEL_URLS = {
-    beginner: "https://maksimkorzh.github.io/go/model/kyu/model.json",
-    dan: "https://maksimkorzh.github.io/go/model/dan/model.json"
-  };
 
-  let board = new Int8Array(STRIDE * STRIDE);
+  let board = [];
+  let boardSize = 19;
   let side = BLACK;
-  let koPoint = -1;
   let history = [];
   let seen = new Set();
-  let kyuModel = null;
-  let danModel = null;
-  let loadPromise = null;
 
-  function point(x, y, boardSize) {
-    const offset = Math.floor((19 - boardSize) / 2);
-    return (y + offset + 1) * STRIDE + x + offset + 1;
+  function key(position) {
+    return position.join(",");
   }
 
-  function adjacent(index) {
-    return [index - 1, index + 1, index - STRIDE, index + STRIDE];
+  function neighbors(index, size = boardSize) {
+    const x = index % size;
+    const y = Math.floor(index / size);
+    const result = [];
+    if (x > 0) result.push(index - 1);
+    if (x + 1 < size) result.push(index + 1);
+    if (y > 0) result.push(index - size);
+    if (y + 1 < size) result.push(index + size);
+    return result;
   }
 
-  function positionKey(position) {
-    return Array.from(position).join(",");
-  }
-
-  function group(position, start) {
+  function group(position, start, size = boardSize) {
     const color = position[start];
-    if (!color) return { stones: [], liberties: new Set() };
+    if (color === EMPTY) return { stones: [], liberties: new Set() };
     const stones = [];
     const liberties = new Set();
     const visited = new Set([start]);
@@ -44,8 +36,7 @@
     while (stack.length) {
       const current = stack.pop();
       stones.push(current);
-      for (const next of adjacent(current)) {
-        if (next < 0 || next >= position.length) continue;
+      for (const next of neighbors(current, size)) {
         if (position[next] === EMPTY) liberties.add(next);
         else if (position[next] === color && !visited.has(next)) {
           visited.add(next);
@@ -56,16 +47,16 @@
     return { stones, liberties };
   }
 
-  function playOn(position, index, color) {
+  function play(position, index, color, size = boardSize) {
     if (index < 0 || index >= position.length || position[index] !== EMPTY) return null;
     const next = position.slice();
     next[index] = color;
     const captured = [];
-    const checked = new Set();
-    for (const neighbor of adjacent(index)) {
-      if (neighbor < 0 || neighbor >= next.length || next[neighbor] !== -color || checked.has(neighbor)) continue;
-      const enemy = group(next, neighbor);
-      for (const stone of enemy.stones) checked.add(stone);
+    const examined = new Set();
+    for (const adjacent of neighbors(index, size)) {
+      if (next[adjacent] !== -color || examined.has(adjacent)) continue;
+      const enemy = group(next, adjacent, size);
+      for (const stone of enemy.stones) examined.add(stone);
       if (!enemy.liberties.size) {
         for (const stone of enemy.stones) {
           next[stone] = EMPTY;
@@ -73,165 +64,147 @@
         }
       }
     }
-    const own = group(next, index);
+    const own = group(next, index, size);
     if (!own.liberties.size) return null;
     return { board: next, captured, own };
   }
 
-  function remember(color, index, pass = false) {
-    history.push({ color, index, pass });
-    seen.add(positionKey(board));
-  }
-
-  async function loadModels() {
-    if (loadPromise) return loadPromise;
-    loadPromise = (async () => {
-      if (!window.tf) throw new Error("TensorFlow.js did not load.");
-      try {
-        await tf.setBackend("webgl");
-        await tf.ready();
-      } catch (_) {
-        await tf.setBackend("cpu");
-        await tf.ready();
-      }
-      [kyuModel, danModel] = await Promise.all([
-        tf.loadGraphModel(MODEL_URLS.beginner),
-        tf.loadGraphModel(MODEL_URLS.dan)
-      ]);
-      return true;
-    })().catch(error => {
-      loadPromise = null;
-      throw error;
-    });
-    return loadPromise;
-  }
-
-  function reset() {
-    board = new Int8Array(STRIDE * STRIDE);
-    board.fill(OFFBOARD);
-    for (let y = 1; y <= 19; y++) for (let x = 1; x <= 19; x++) board[y * STRIDE + x] = EMPTY;
+  function reset(size = 19) {
+    boardSize = [9, 13, 19].includes(size) ? size : 19;
+    board = Array(boardSize * boardSize).fill(EMPTY);
     side = BLACK;
-    koPoint = -1;
     history = [];
-    seen = new Set([positionKey(board)]);
+    seen = new Set([key(board)]);
     return true;
   }
 
-  function place(x, y, color, boardSize) {
-    const engineColor = color === 1 ? BLACK : WHITE;
-    if (side !== engineColor) return false;
-    const index = point(x, y, boardSize);
-    if (index === koPoint) return false;
-    const result = playOn(board, index, engineColor);
-    if (!result) return false;
-    const oldKey = positionKey(board);
-    const newKey = positionKey(result.board);
-    if (seen.has(newKey)) return false;
+  function place(x, y, color, size) {
+    if (size !== boardSize || color !== side || x < 0 || y < 0 || x >= size || y >= size) return false;
+    const index = y * size + x;
+    const result = play(board, index, color, size);
+    if (!result || seen.has(key(result.board))) return false;
     board = result.board;
-    koPoint = result.captured.length === 1 && result.own.stones.length === 1 &&
-      result.own.liberties.size === 1 ? result.captured[0] : -1;
     side = -side;
-    history.push({ color: engineColor, index, pass: false, previousKey: oldKey });
-    seen.add(newKey);
+    history.push({ color, index, pass: false });
+    seen.add(key(board));
     return true;
   }
 
   function pass() {
     history.push({ color: side, index: -1, pass: true });
     side = -side;
-    koPoint = -1;
     return true;
   }
 
-  function libertyCount(position, index) {
-    return group(position, index).liberties.size;
-  }
-
-  function encodeInput() {
-    const binary = new Float32Array(361 * 22);
-    const globals = new Float32Array(19);
-    const opponent = -side;
-    for (let y = 0; y < 19; y++) {
-      for (let x = 0; x < 19; x++) {
-        const local = y * 19 + x;
-        const offset = local * 22;
-        const index = (y + 1) * STRIDE + x + 1;
-        binary[offset] = 1;
-        if (board[index] === side) binary[offset + 1] = 1;
-        if (board[index] === opponent) binary[offset + 2] = 1;
-        if (board[index]) {
-          const liberties = libertyCount(board, index);
-          if (liberties === 1) binary[offset + 3] = 1;
-          else if (liberties === 2) binary[offset + 4] = 1;
-          else if (liberties === 3) binary[offset + 5] = 1;
+  function localShapeScore(position, index, color, result, size) {
+    const x = index % size, y = Math.floor(index / size);
+    let score = 0;
+    const ownGroups = new Set();
+    const enemyGroups = new Set();
+    for (const n of neighbors(index, size)) {
+      if (position[n] === color) {
+        const g = group(position, n, size);
+        const id = g.stones[0];
+        if (!ownGroups.has(id)) {
+          ownGroups.add(id);
+          score += g.liberties.size === 1 ? 3.8 : g.liberties.size === 2 ? 1.2 : 0.35;
+          if (g.liberties.size === 1) score += 2.5;
         }
-        if (index === koPoint) binary[offset + 6] = 1;
+      } else if (position[n] === -color) {
+        const g = group(position, n, size);
+        const id = g.stones[0];
+        if (!enemyGroups.has(id)) {
+          enemyGroups.add(id);
+          if (g.liberties.size === 1) score += 10 + g.stones.length * 2.5;
+          else if (g.liberties.size === 2) score += 2.2;
+        }
+      } else {
+        score += 0.25;
       }
     }
-
-    const recent = history.slice(-5).reverse();
-    for (let i = 0; i < recent.length; i++) {
-      const move = recent[i];
-      const plane = 9 + i;
-      if (move.pass) {
-        globals[i] = 1;
-        continue;
-      }
-      const x = move.index % STRIDE - 1;
-      const y = Math.floor(move.index / STRIDE) - 1;
-      if (x >= 0 && x < 19 && y >= 0 && y < 19) binary[(y * 19 + x) * 22 + plane] = 1;
-    }
-    globals[5] = (side === WHITE ? KOMI + 1 : -KOMI) / 20;
-    return { binary, globals };
+    score += result.captured.length * 12;
+    const liberties = result.own.liberties.size;
+    score += liberties === 1 ? -13 : liberties === 2 ? -2.5 : Math.min(liberties, 6) * 0.55;
+    const center = (size - 1) / 2;
+    const distance = Math.abs(x - center) + Math.abs(y - center);
+    score += (size - distance) * 0.13;
+    return score;
   }
 
-  async function chooseMove(boardSize, difficulty, legalMoves) {
-    await loadModels();
-    const { binary, globals } = encodeInput();
-    const binaryTensor = tf.tensor(binary, [1, 361, 22], "float32");
-    const globalTensor = tf.tensor(globals, [1, 19], "float32");
-    let outputs = [];
-    let sliced = null;
-    try {
-      const advanced = difficulty === "advanced" || difficulty === "expert";
-      const model = advanced ? danModel : kyuModel;
-      outputs = await model.executeAsync({
-        "swa_model/bin_inputs": binaryTensor,
-        "swa_model/global_inputs": globalTensor
-      });
-      const policyTensor = advanced ? outputs[1] : outputs[3];
-      sliced = policyTensor.slice([0, 0, 0], [1, 1, 361]);
-      const policy = (await sliced.array())[0][0];
-      const offset = Math.floor((19 - boardSize) / 2);
-      const candidates = [];
-      for (const moveIndex of legalMoves) {
-        const x = moveIndex % boardSize;
-        const y = Math.floor(moveIndex / boardSize);
-        const internal = point(x, y, boardSize);
-        if (board[internal] !== EMPTY) continue;
-        const px = x + offset;
-        const py = y + offset;
-        const probability = policy[py * 19 + px];
-        if (Number.isFinite(probability)) candidates.push({ x, y, probability });
-      }
-      if (!candidates.length) return null;
-      candidates.sort((a, b) => b.probability - a.probability);
-      const topCount = difficulty === "beginner" ? 12
-        : difficulty === "intermediate" ? 5
-        : difficulty === "advanced" ? 2 : 1;
-      const pool = candidates.slice(0, Math.min(topCount, candidates.length));
-      return pool[Math.floor(Math.random() * pool.length)];
-    } finally {
-      if (sliced) sliced.dispose();
-      for (const output of outputs) if (output && typeof output.dispose === "function") output.dispose();
-      binaryTensor.dispose();
-      globalTensor.dispose();
+  function influenceScore(position, index, color, size) {
+    const x = index % size, y = Math.floor(index / size);
+    let nearestOwn = size * 2, nearestEnemy = size * 2, nearby = 0;
+    for (let i = 0; i < position.length; i++) {
+      if (!position[i]) continue;
+      const distance = Math.abs(x - i % size) + Math.abs(y - Math.floor(i / size));
+      if (distance <= 4) nearby++;
+      if (position[i] === color) nearestOwn = Math.min(nearestOwn, distance);
+      else nearestEnemy = Math.min(nearestEnemy, distance);
     }
+    if (nearestOwn === size * 2 && nearestEnemy === size * 2) return 1.5;
+    let score = 0;
+    if (nearestOwn <= 4) score += (5 - nearestOwn) * 0.9;
+    if (nearestEnemy <= 3) score += (4 - nearestEnemy) * 0.65;
+    if (nearby === 0) score += 0.5;
+    return score;
   }
 
-  window.kataReset = reset;
-  window.kataPlace = place;
-  window.kataPass = pass;
-  window.kataChooseMove = chooseMove;
-  window.kataLoad = loadModels;
+  function scoreMove(position, index, color, size, difficulty) {
+    const result = play(position, index, color, size);
+    if (!result) return -Infinity;
+    let score = localShapeScore(position, index, color, result, size)
+      + influenceScore(position, index, color, size);
+
+    // Avoid moves that let an adjacent friendly group remain in atari.
+    const checked = new Set();
+    for (const n of neighbors(index, size)) {
+      if (result.board[n] !== color || checked.has(n)) continue;
+      const g = group(result.board, n, size);
+      for (const stone of g.stones) checked.add(stone);
+      if (g.liberties.size === 1) score -= g.stones.length * 2.8;
+    }
+
+    // One-ply tactical check: reward moves that prevent an immediate capture
+    // and discount moves that can be captured straight away.
+    const opponent = -color;
+    let immediateCaptureThreat = 0;
+    for (const n of neighbors(index, size)) {
+      if (result.board[n] !== opponent) continue;
+      const enemyGroup = group(result.board, n, size);
+      if (enemyGroup.liberties.size === 1) immediateCaptureThreat += enemyGroup.stones.length;
+    }
+    score += immediateCaptureThreat * 0.8;
+
+    if (difficulty === "beginner") score += Math.random() * 5;
+    else if (difficulty === "intermediate") score += Math.random() * 1.8;
+    else if (difficulty === "advanced") score += Math.random() * 0.55;
+    else score += Math.random() * 0.12;
+    return score;
+  }
+
+  async function chooseMove(size, difficulty, legalMoves) {
+    if (size !== boardSize || side === EMPTY) return null;
+    if (!legalMoves.length) return null;
+    const ranked = [];
+    for (const index of legalMoves) {
+      if (index < 0 || index >= board.length || board[index] !== EMPTY) continue;
+      const result = play(board, index, side, size);
+      if (!result || seen.has(key(result.board))) continue;
+      ranked.push({ index, score: scoreMove(board, index, side, size, difficulty) });
+    }
+    if (!ranked.length) return null;
+    ranked.sort((a, b) => b.score - a.score);
+    const poolSize = difficulty === "beginner" ? 14
+      : difficulty === "intermediate" ? 6
+      : difficulty === "advanced" ? 3 : 1;
+    const pool = ranked.slice(0, Math.min(poolSize, ranked.length));
+    const chosen = pool[Math.floor(Math.random() * pool.length)].index;
+    return { x: chosen % size, y: Math.floor(chosen / size) };
+  }
+
+  window.ssalmukReset = reset;
+  window.ssalmukPlace = place;
+  window.ssalmukPass = pass;
+  window.ssalmukChooseMove = chooseMove;
+  window.ssalmukLoad = () => Promise.resolve(true);
 })();
