@@ -36,7 +36,7 @@
   let state = null;
   let aiTimer = null;
 
-  function freshState(size, mode, humanColor, difficulty, rules) {
+  function freshState(size, mode, humanColor, difficulty, rules, characterId) {
     const board = Array(size * size).fill(EMPTY);
     return {
       size, mode, humanColor, difficulty, rules, characterId, board, turn: BLACK,
