@@ -33,38 +33,6 @@
       return (y + offset + 1) * 21 + (x + offset + 1);
     }
 
-    function kataSaveEngineState() {
-      return {
-        board: board.slice(),
-        moveHistory: moveHistory.slice(),
-        side,
-        ko,
-        userMove,
-        moveCount,
-        liberties: liberties.slice(),
-        block: block.slice()
-      };
-    }
-
-    function kataRestoreEngineState(saved) {
-      board = saved.board;
-      moveHistory = saved.moveHistory;
-      side = saved.side;
-      ko = saved.ko;
-      userMove = saved.userMove;
-      moveCount = saved.moveCount;
-      liberties = saved.liberties;
-      block = saved.block;
-    }
-
-    function kataIsLegal(point) {
-      if (board[point] !== EMPTY || point === ko) return false;
-      const saved = kataSaveEngineState();
-      const legal = setStone(point, side, false);
-      kataRestoreEngineState(saved);
-      return legal;
-    }
-
     window.kataReset = function() {
       size = 21;
       komi = 6.5;
@@ -84,7 +52,7 @@
       return true;
     };
 
-    window.kataChooseMove = async function(boardSize, difficulty) {
+    window.kataChooseMove = async function(boardSize, difficulty, legalMoves) {
       if (!danModel || !kyuModel) throw new Error("KataNet models are not ready.");
       level = (difficulty === "advanced" || difficulty === "expert") ? 1 : 0;
       globalInputs.fill(0);
@@ -107,15 +75,15 @@
         const offset = kataOffset(boardSize);
         const candidates = [];
 
-        for (let y = 0; y < boardSize; y++) {
-          for (let x = 0; x < boardSize; x++) {
-            const point = kataInternalPoint(x, y, boardSize);
-            if (!kataIsLegal(point)) continue;
-            const modelX = x + offset;
-            const modelY = y + offset;
-            const probability = policy[modelY * 19 + modelX];
-            if (Number.isFinite(probability)) candidates.push({ x, y, probability });
-          }
+        for (const index of legalMoves) {
+          const x = index % boardSize;
+          const y = Math.floor(index / boardSize);
+          const point = kataInternalPoint(x, y, boardSize);
+          if (board[point] !== EMPTY) continue;
+          const modelX = x + offset;
+          const modelY = y + offset;
+          const probability = policy[modelY * 19 + modelX];
+          if (Number.isFinite(probability)) candidates.push({ x, y, probability });
         }
 
         if (!candidates.length) return null;
