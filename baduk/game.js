@@ -215,7 +215,7 @@
       size, mode, humanColor, difficulty, rules, characterId, board, turn: BLACK,
       captures: { black: 0, white: 0 }, consecutivePasses: 0, moveCount: 0, lastMove: -1,
       finished: false, aiThinking: false, engineLoading: false, engineError: false,
-      seen: new Set([boardKey(board)]), neuralHistory: [], past: []
+      seen: new Set([boardKey(board)]), engineHistory: [], past: []
     };
   }
 
@@ -286,7 +286,7 @@
       captures: { ...state.captures }, consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
       lastMove: state.lastMove, finished: state.finished,
       aiThinking: false, engineLoading: false, engineError: false,
-      seen: new Set(state.seen), neuralHistory: state.neuralHistory.slice()
+      seen: new Set(state.seen), engineHistory: state.engineHistory.slice()
     };
   }
 
@@ -300,7 +300,7 @@
 
   function ensureNeuralEngine() {
     if (location.protocol === "file:") {
-      return Promise.reject(new Error("The neural iframe requires http://localhost, not file://."));
+      return Promise.reject(new Error("The AI iframe requires http://localhost, not file://."));
     }
     if (engineLoadPromise) return engineLoadPromise;
     if (!engineFrame.getAttribute("src")) engineFrame.src = "./engine.html";
@@ -308,8 +308,8 @@
       const started = Date.now();
       function poll() {
         const engine = engineFrame.contentWindow;
-        if (engine && typeof engine.kataChooseMove === "function" && typeof engine.kataReset === "function" && typeof engine.kataLoad === "function") {
-          engine.kataLoad().then(() => resolve(engine)).catch(error => {
+        if (engine && typeof engine.ssalmukChooseMove === "function" && typeof engine.ssalmukReset === "function" && typeof engine.ssalmukLoad === "function") {
+          engine.ssalmukLoad().then(() => resolve(engine)).catch(error => {
             engineLoadPromise = null;
             reject(error);
           });
@@ -317,7 +317,7 @@
         }
         if (Date.now() - started > 180000) {
           engineLoadPromise = null;
-          reject(new Error("KataNet model loading timed out."));
+          reject(new Error("AI engine initialization timed out."));
           return;
         }
         setTimeout(poll, 200);
@@ -336,11 +336,11 @@
     try {
       const engine = await ensureNeuralEngine();
       if (state !== requestedState || state.mode !== "ai") return;
-      engine.kataReset();
-      for (const action of state.neuralHistory) {
-        if (action.pass) engine.kataPass();
-        else if (!engine.kataPlace(action.x, action.y, action.color, state.size)) {
-          throw new Error("Could not restore neural engine move history.");
+      engine.ssalmukReset(state.size);
+      for (const action of state.engineHistory) {
+        if (action.pass) engine.ssalmukPass();
+        else if (!engine.ssalmukPlace(action.x, action.y, action.color, state.size)) {
+          throw new Error("Could not restore AI engine move history.");
         }
       }
       state.engineLoading = false;
@@ -432,7 +432,7 @@
       const engine = engineFrame.contentWindow;
       const x = index % state.size;
       const y = Math.floor(index / state.size);
-      if (!engine || typeof engine.kataPlace !== "function" || !engine.kataPlace(x, y, color, state.size)) {
+      if (!engine || typeof engine.ssalmukPlace !== "function" || !engine.ssalmukPlace(x, y, color, state.size)) {
         if (!fromAI) gameHint.textContent = "AI 엔진과 대국 상태가 일치하지 않습니다. 새 대국을 시작하십시오.";
         return false;
       }
@@ -440,7 +440,7 @@
 
     const previousEval = state.positionEval ?? evaluatePosition(state.board);
     saveUndoPoint();
-    state.neuralHistory.push({ x: index % state.size, y: Math.floor(index / state.size), color });
+    state.engineHistory.push({ x: index % state.size, y: Math.floor(index / state.size), color });
     state.board = move.board;
     state.captures[color === BLACK ? "black" : "white"] += move.captured.length;
     state.turn = -color;
@@ -459,11 +459,11 @@
     if (!state || state.finished || state.aiThinking) return;
     if (state.mode === "ai") {
       const engine = engineFrame.contentWindow;
-      if (!engine || typeof engine.kataPass !== "function") return;
-      engine.kataPass();
+      if (!engine || typeof engine.ssalmukPass !== "function") return;
+      engine.ssalmukPass();
     }
     saveUndoPoint();
-    state.neuralHistory.push({ pass: true, color: state.turn });
+    state.engineHistory.push({ pass: true, color: state.turn });
     state.moveCount += 1;
     state.lastMove = -1;
     state.consecutivePasses += 1;
@@ -509,8 +509,8 @@
       const requestedState = state;
       ensureNeuralEngine().then(engine => {
         if (state !== requestedState || state.mode !== "ai") return;
-        engine.kataReset();
-        state.neuralHistory = [];
+        engine.ssalmukReset(state.size);
+        state.engineHistory = [];
         state.engineLoading = false;
         state.aiThinking = false;
         render();
@@ -521,7 +521,7 @@
         state.aiThinking = false;
         state.engineError = true;
         render();
-        gameHint.textContent = location.protocol === "file:" ? "AI 대국은 file://에서 실행할 수 없습니다. 터미널에서 python3 -m http.server 8000을 실행한 뒤 http://localhost:8000/baduk/으로 접속하십시오." : "AI 모델을 불러오지 못했습니다. 네트워크 연결을 확인한 뒤 새 대국을 시작하십시오.";
+        gameHint.textContent = location.protocol === "file:" ? "AI 대국은 file://에서 실행할 수 없습니다. 터미널에서 python3 -m http.server 8000을 실행한 뒤 http://localhost:8000/baduk/으로 접속하십시오." : "AI 엔진을 준비하지 못했습니다. 네트워크 연결을 확인한 뒤 새 대국을 시작하십시오.";
       });
     } else {
       render();
@@ -582,14 +582,14 @@
     statusTitle.textContent = state.finished ? "대국 종료" : (state.turn === BLACK ? "흑 차례" : "백 차례");
     if (state.finished) statusDetail.textContent = "계가 결과를 확인하십시오.";
     else if (state.engineError) statusDetail.textContent = "AI 엔진을 사용할 수 없습니다.";
-    else if (state.engineLoading) statusDetail.textContent = "신경망 AI 모델을 불러오는 중입니다.";
-    else if (state.aiThinking) statusDetail.textContent = "신경망 AI가 다음 수를 계산하고 있습니다.";
+    else if (state.engineLoading) statusDetail.textContent = "자체 AI 엔진을 준비하고 있습니다.";
+    else if (state.aiThinking) statusDetail.textContent = "AI가 다음 수를 계산하고 있습니다.";
     else if (state.mode === "ai" && state.turn !== state.humanColor) statusDetail.textContent = "AI 대국 중";
     else statusDetail.textContent = "교차점을 선택하여 착수하십시오.";
     moveCount.textContent = state.moveCount + "수";
     $("black-captures").textContent = state.captures.black;
     $("white-captures").textContent = state.captures.white;
-    undoButton.disabled = state.past.length === 0 || state.aiThinking || state.engineLoading || (state.mode === "ai" && !state.neuralHistory.some(action => !action.pass && action.color === state.humanColor));
+    undoButton.disabled = state.past.length === 0 || state.aiThinking || state.engineLoading || (state.mode === "ai" && !state.engineHistory.some(action => !action.pass && action.color === state.humanColor));
     passButton.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn();
     scoreRequestButton.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn();
     if (!state.finished) resultPanel.hidden = true;
@@ -657,7 +657,7 @@
           passTurnFromAI();
           return;
         }
-        const move = await engine.kataChooseMove(state.size, state.difficulty, legalMoves);
+        const move = await engine.ssalmukChooseMove(state.size, state.difficulty, legalMoves);
         if (state !== requestedState || state.finished || !isAiTurn()) return;
         state.aiThinking = false;
         if (!move) passTurnFromAI();
@@ -667,7 +667,7 @@
         state.aiThinking = false;
         state.engineError = true;
         render();
-        gameHint.textContent = "신경망 AI 계산에 실패했습니다. 새 대국을 시작하십시오.";
+        gameHint.textContent = "AI 계산에 실패했습니다. 새 대국을 시작하십시오.";
       }
     }, 80);
   }
@@ -675,14 +675,14 @@
   function passTurnFromAI() {
     if (!state || state.finished || !isAiTurn()) return;
     const engine = engineFrame.contentWindow;
-    if (!engine || typeof engine.kataPass !== "function") {
+    if (!engine || typeof engine.ssalmukPass !== "function") {
       state.engineError = true;
       render();
       return;
     }
-    engine.kataPass();
+    engine.ssalmukPass();
     saveUndoPoint();
-    state.neuralHistory.push({ pass: true, color: state.turn });
+    state.engineHistory.push({ pass: true, color: state.turn });
     state.aiThinking = false;
     state.moveCount += 1;
     state.lastMove = -1;
@@ -774,7 +774,7 @@
       ...previous,
       board: previous.board.slice(),
       seen: new Set(previous.seen),
-      neuralHistory: previous.neuralHistory.slice(),
+      engineHistory: previous.engineHistory.slice(),
       past: remainingPast,
       aiThinking: false,
       engineLoading: false,
