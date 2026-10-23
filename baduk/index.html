@@ -75,6 +75,16 @@
             </select>
           </label>
         </fieldset>
+        <fieldset id="ai-character-field">
+          <legend>대국 상대</legend>
+          <label class="difficulty-choice" for="ai-character">
+            <span>AI 캐릭터</span>
+            <select id="ai-character" name="ai-character">
+              <option value="white1">백강</option>
+              <option value="white2">백서아</option>
+            </select>
+          </label>
+        </fieldset>
         <button id="start-button" class="primary-button full-button" type="button">대국 시작</button>
       </div>
       <p class="tiny-note">기본 계가 기준: 한국식 · 영역계가 · 백 덤 6.5집</p>
@@ -86,6 +96,18 @@
         <div class="game-title"><p class="eyebrow">GO · BADUK</p><h1 id="game-title">19 × 19 바둑</h1></div>
         <button id="restart-button" class="icon-button" type="button" aria-label="새 대국" title="새 대국">↻</button>
       </div>
+
+      <section id="opponent-profile" class="opponent-profile" aria-label="AI 상대 프로필">
+        <div class="opponent-portrait" aria-label="캐릭터 이미지 준비 중">
+          <span id="opponent-emotion" class="opponent-emotion">냉철</span>
+        </div>
+        <div class="opponent-info">
+          <p class="eyebrow">YOUR OPPONENT</p>
+          <h2 id="opponent-name">백강</h2>
+          <p id="opponent-description">백돌 · 남성</p>
+          <p id="opponent-line" class="opponent-line" aria-live="polite">차분하게 한 수씩 둬 보죠.</p>
+        </div>
+      </section>
 
       <div class="status-card" aria-live="polite">
         <span id="turn-stone" class="turn-stone black"></span>
