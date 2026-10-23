@@ -265,7 +265,7 @@
         state.aiThinking = false;
         state.engineError = true;
         render();
-        gameHint.textContent = "AI 모델을 불러오지 못했습니다. 네트워크 연결을 확인한 뒤 새 대국을 시작하십시오.";
+        gameHint.textContent = location.protocol === "file:" ? "AI 대국은 file://에서 실행할 수 없습니다. 터미널에서 python3 -m http.server 8000을 실행한 뒤 http://localhost:8000/baduk/으로 접속하십시오." : "AI 모델을 불러오지 못했습니다. 네트워크 연결을 확인한 뒤 새 대국을 시작하십시오.";
       });
     } else {
       render();
