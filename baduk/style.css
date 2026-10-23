@@ -111,3 +111,54 @@ legend { margin-bottom: 10px; font-size: 13px; font-weight: 800; }
 
 /* Canvas board shares one coordinate system for lines, stars and stones. */
 .board { display:block; width:100%; height:auto; aspect-ratio:1; background:#d9b575; touch-action:manipulation; }
+
+
+/* Faint Go-board motif, matching the Gomoku landing page's ink-wash treatment. */
+.setup-screen .intro { position: relative; isolation: isolate; }
+.setup-screen .intro > h1,
+.setup-screen .intro > .intro-copy { position: relative; z-index: 1; max-width: 58%; }
+.setup-screen .hero-boards {
+  position: absolute; z-index: 0; right: 0; top: 50%;
+  width: 32%; transform: translateY(-38%); pointer-events: none; opacity: .2;
+}
+.setup-screen .hero-boards::before {
+  content: ""; position: absolute; z-index: -1; top: -100px; right: -20px;
+  width: 115%; height: 190px; transform: rotate(-12deg);
+  background:
+    radial-gradient(ellipse at 72% 10%, rgba(43,55,43,.18), transparent 58%),
+    linear-gradient(108deg, transparent 30%, rgba(43,55,43,.13) 48%, rgba(43,55,43,.04) 56%, transparent 72%);
+  filter: blur(8px); border-radius: 48% 0 55% 35%;
+}
+.setup-screen .hero-board {
+  position: relative; width: 100%; aspect-ratio: 1; overflow: visible;
+  background-image:
+    linear-gradient(to right, rgba(47,57,47,.8) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(47,57,47,.8) 1px, transparent 1px);
+  background-size: 25% 100%, 100% 25%;
+  background-position: left top; background-repeat: repeat-x, repeat-y;
+  border-right: 1px solid rgba(47,57,47,.8);
+  border-bottom: 1px solid rgba(47,57,47,.8);
+}
+.setup-screen .hero-board .stone {
+  position: absolute; left: var(--x); top: var(--y);
+  width: 15%; aspect-ratio: 1; border-radius: 50%;
+  transform: translate(-50%,-50%);
+}
+.setup-screen .hero-board .black {
+  background: radial-gradient(circle at 32% 25%, #55584f 0, #252820 48%, #171a16 100%);
+  box-shadow: 1px 2px 3px #0004;
+}
+.setup-screen .hero-board .white {
+  background: radial-gradient(circle at 32% 25%, #fff 0, #fff 48%, #d5d3c8 100%);
+  border: 1px solid #aaa99f; box-shadow: 1px 2px 3px #0002;
+}
+@media (max-width: 620px) {
+  .setup-screen .intro > h1,
+  .setup-screen .intro > .intro-copy { max-width: 100%; }
+  .setup-screen .hero-boards { width: 30%; top: 0; transform: none; opacity: .12; }
+  .setup-screen .hero-boards::before { top: -70px; right: -12px; height: 135px; }
+}
+@media (max-width: 420px) {
+  .setup-screen .hero-boards { width: 27%; opacity: .1; }
+  .setup-screen .hero-board .stone { width: 14%; }
+}
