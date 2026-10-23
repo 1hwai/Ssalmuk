@@ -13,6 +13,7 @@
   const resultPanel = $("result-panel");
   const undoButton = $("undo-button");
   const passButton = $("pass-button");
+  const scoreRequestButton = $("score-request-button");
   const newButton = $("new-button");
   const engineFrame = $("kata-engine");
   let engineLoadPromise = null;
@@ -586,8 +587,11 @@
     else if (state.mode === "ai" && state.turn !== state.humanColor) statusDetail.textContent = "AI 대국 중";
     else statusDetail.textContent = "교차점을 선택하여 착수하십시오.";
     moveCount.textContent = state.moveCount + "수";
+    $("black-captures").textContent = state.captures.black;
+    $("white-captures").textContent = state.captures.white;
     undoButton.disabled = state.past.length === 0 || state.aiThinking || state.engineLoading || (state.mode === "ai" && !state.neuralHistory.some(action => !action.pass && action.color === state.humanColor));
     passButton.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn();
+    scoreRequestButton.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn();
     if (!state.finished) resultPanel.hidden = true;
   }
 
@@ -740,7 +744,7 @@
     return { black, white, komi, rules, areaScoring };
   }
 
-  function showScore() {
+  function showScore(requested = false) {
     const score = scoreBoard();
     const winner = score.black > score.white ? "흑 승리" : score.white > score.black ? "백 승리" : "무승부";
     const ruleNames = { korean: "한국식", japanese: "일본식", chinese: "중국식" };
@@ -749,7 +753,7 @@
     title.textContent = ruleNames[score.rules] + " · " + winner + " · 흑 " + score.black + "집 / 백 " + score.white + "집";
     const detail = document.createElement("p");
     const scoringName = score.areaScoring ? "집과 살아 있는 돌을 합산하는 방식" : "집과 포획한 돌을 합산하는 방식";
-    detail.textContent = scoringName + ". 백 덤 " + score.komi + "집 포함. 간이 계가이므로 사활·사석 및 빅(세키)은 자동 판정하지 않습니다.";
+    detail.textContent = scoringName + ". 백 덤 " + score.komi + "집 포함. " + (requested ? "계가 요청으로 대국을 종료했습니다. " : "") + "간이 계가이므로 사활·사석 및 빅(세키)은 자동 판정하지 않습니다. 집계는 참고용이며, 특히 살아 있지 않은 돌이 남아 있으면 결과가 달라질 수 있습니다.";
     resultPanel.append(title, detail);
     resultPanel.hidden = false;
     gameHint.textContent = "대국이 종료되었습니다. 새 대국을 시작할 수 있습니다.";
@@ -822,4 +826,14 @@
   newButton.addEventListener("click", restartGame);
   undoButton.addEventListener("click", undo);
   passButton.addEventListener("click", passTurn);
+  scoreRequestButton.addEventListener("click", () => {
+    if (!state || state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn()) return;
+    if (!window.confirm("현재 판을 기준으로 계가할까?\n사활과 사석은 자동 판정되지 않아 결과가 실제 승패와 다를 수 있어.")) return;
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = null;
+    state.finished = true;
+    updateCharacterReaction(state.positionEval ?? evaluatePosition(), state.turn);
+    showScore(true);
+    render();
+  });
 })();
