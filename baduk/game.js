@@ -424,27 +424,33 @@
   }
 
   function undo() {
-    if (!state || !state.past.length || state.aiThinking) return;
+    if (!state || !state.past.length || state.aiThinking || state.engineLoading) return;
     if (aiTimer) {
       clearTimeout(aiTimer);
       aiTimer = null;
     }
-    let previous = state.past.pop();
-    if (state.mode === "ai") {
-      if (state.turn === state.humanColor && state.past.length) previous = state.past.pop();
-      else if (state.turn !== state.humanColor && state.past.length) previous = state.past.pop();
+    const remainingPast = state.past.slice();
+    let previous = remainingPast.pop();
+    if (state.mode === "ai" && state.turn === state.humanColor && remainingPast.length) {
+      previous = remainingPast.pop();
     }
     state = {
       ...previous,
       board: previous.board.slice(),
       seen: new Set(previous.seen),
-      past: state.past.slice(),
-      aiThinking: false
+      neuralHistory: previous.neuralHistory.slice(),
+      past: remainingPast,
+      aiThinking: false,
+      engineLoading: false,
+      engineError: false
     };
     resultPanel.hidden = true;
     gameHint.textContent = "착수를 취소했습니다.";
-    render();
-    maybeStartAI();
+    if (state.mode === "ai") rebuildNeuralEngine();
+    else {
+      render();
+      maybeStartAI();
+    }
   }
 
   function restartGame() {
@@ -454,10 +460,10 @@
 
   document.querySelectorAll('input[name="mode"]').forEach(input => {
     input.addEventListener("change", () => {
-      $("color-field").hidden = input.value === "local" && input.checked;
-      if (input.value === "local" && input.checked) {
-        document.querySelector('input[name="player-color"][value="1"]').checked = true;
-      }
+      const aiMode = document.querySelector('input[name="mode"]:checked').value === "ai";
+      $("color-field").hidden = !aiMode;
+      $("difficulty-field").hidden = !aiMode;
+      if (!aiMode) document.querySelector('input[name="player-color"][value="1"]').checked = true;
     });
   });
   $("start-button").addEventListener("click", startGame);
@@ -472,10 +478,4 @@
   newButton.addEventListener("click", restartGame);
   undoButton.addEventListener("click", undo);
   passButton.addEventListener("click", passTurn);
-  document.querySelector('input[name="mode"][value="local"]').addEventListener("change", () => {
-    $("color-field").hidden = true;
-  });
-  document.querySelector('input[name="mode"][value="ai"]').addEventListener("change", () => {
-    $("color-field").hidden = false;
-  });
 })();
