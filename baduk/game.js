@@ -407,10 +407,14 @@
     state.moveCount += 1;
     state.lastMove = -1;
     state.consecutivePasses += 1;
+    const passer = state.turn;
     state.turn = -state.turn;
     if (state.consecutivePasses >= 2) {
       state.finished = true;
+      updateCharacterReaction(state.positionEval ?? evaluatePosition(), passer);
       showScore();
+    } else {
+      updateCharacterReaction(state.positionEval ?? evaluatePosition(), passer);
     }
     render();
     maybeStartAI();
@@ -620,10 +624,14 @@
     state.moveCount += 1;
     state.lastMove = -1;
     state.consecutivePasses += 1;
+    const passer = state.turn;
     state.turn = -state.turn;
     if (state.consecutivePasses >= 2) {
       state.finished = true;
+      updateCharacterReaction(state.positionEval ?? evaluatePosition(), passer);
       showScore();
+    } else {
+      updateCharacterReaction(state.positionEval ?? evaluatePosition(), passer);
     }
     render();
     maybeStartAI();
