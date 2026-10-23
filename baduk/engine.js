@@ -4,6 +4,7 @@
   const EMPTY = 0;
   const BLACK = 1;
   const WHITE = -1;
+  const OFFBOARD = 2;
   const STRIDE = 21;
   const KOMI = 6.5;
   const MODEL_URLS = {
@@ -107,6 +108,8 @@
 
   function reset() {
     board = new Int8Array(STRIDE * STRIDE);
+    board.fill(OFFBOARD);
+    for (let y = 1; y <= 19; y++) for (let x = 1; x <= 19; x++) board[y * STRIDE + x] = EMPTY;
     side = BLACK;
     koPoint = -1;
     history = [];
