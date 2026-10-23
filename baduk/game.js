@@ -339,7 +339,18 @@
       try {
         const engine = await ensureNeuralEngine();
         if (state !== requestedState || state.finished || !isAiTurn()) return;
-        const move = await engine.kataChooseMove(state.size, state.difficulty);
+        const legalMoves = [];
+        for (let index = 0; index < state.board.length; index++) {
+          if (state.board[index] !== EMPTY) continue;
+          const result = simulateMove(state.board, index, state.turn, state.size);
+          if (result && !state.seen.has(boardKey(result.board))) legalMoves.push(index);
+        }
+        if (!legalMoves.length) {
+          state.aiThinking = false;
+          passTurnFromAI();
+          return;
+        }
+        const move = await engine.kataChooseMove(state.size, state.difficulty, legalMoves);
         if (state !== requestedState || state.finished || !isAiTurn()) return;
         state.aiThinking = false;
         if (!move) passTurnFromAI();
