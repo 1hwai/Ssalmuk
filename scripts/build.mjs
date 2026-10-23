@@ -24,6 +24,7 @@ async function copySite(source, destination, relative = "") {
   await mkdir(destination, { recursive: true });
   const entries = await readdir(source, { withFileTypes: true });
 
+  
   for (const entry of entries) {
     const childRelative = path.posix.join(relative.split(path.sep).join("/"), entry.name);
     const sourcePath = path.join(source, entry.name);
