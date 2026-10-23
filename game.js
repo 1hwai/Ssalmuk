@@ -69,25 +69,7 @@
   }
 
   function render() {
-    boardElement.replaceChildren();
-    const fragment = document.createDocumentFragment();
-    for (let y = 0; y < SIZE; y++) {
-      for (let x = 0; x < SIZE; x++) {
-        const cell = document.createElement("button");
-        cell.type = "button";
-        cell.className = "cell";
-        cell.setAttribute("role", "gridcell");
-        cell.setAttribute("aria-label", `${y + 1}행 ${x + 1}열${board[y][x] === BLACK ? ", 검은 돌" : board[y][x] === WHITE ? ", 흰 돌" : ""}`);
-        if (board[y][x] === BLACK) cell.classList.add("black");
-        if (board[y][x] === WHITE) cell.classList.add("white");
-        const last = moves[moves.length - 1];
-        if (last && last.x === x && last.y === y) cell.classList.add("last-move");
-        cell.disabled = finished || thinking || board[y][x] !== EMPTY || (mode === "ai" && turn === aiColor);
-        cell.addEventListener("click", () => placeStone(x, y));
-        fragment.append(cell);
-      }
-    }
-    boardElement.append(fragment);
+    drawBoard();
     moveCount.textContent = `${moves.length}수`;
     turnStone.className = `turn-stone ${turn === BLACK ? "black-stone" : "white-stone"}`;
     undoButton.disabled = thinking || (mode === "ai"
@@ -101,6 +83,41 @@
       statusTitle.textContent = turn === BLACK ? "흑 차례" : "백 차례";
       statusDetail.textContent = mode === "ai" && turn === aiColor ? "AI 착수 대기." : "교차점을 선택하여 착수하십시오.";
     }
+  }
+
+  function drawBoard() {
+    const rect = boardElement.getBoundingClientRect();
+    if (!rect.width) return;
+    const dpr = window.devicePixelRatio || 1;
+    const px = Math.round(rect.width * dpr);
+    if (boardElement.width !== px || boardElement.height !== px) { boardElement.width = px; boardElement.height = px; }
+    const ctx = boardElement.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = rect.width, cell = w / SIZE, edge = cell / 2;
+    ctx.clearRect(0, 0, w, w);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--board").trim() || "#e6bd78";
+    ctx.fillRect(0, 0, w, w);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--board-line").trim() || "rgba(73,53,29,.58)";
+    ctx.lineWidth = 1; ctx.beginPath();
+    for (let i = 0; i < SIZE; i++) { const p=edge+i*cell; ctx.moveTo(edge,p);ctx.lineTo(w-edge,p);ctx.moveTo(p,edge);ctx.lineTo(p,w-edge); }
+    ctx.stroke();
+    ctx.fillStyle="#594327";
+    for(const x of [3,7,11]) for(const y of [3,7,11]) {ctx.beginPath();ctx.arc(edge+x*cell,edge+y*cell,Math.max(1.5,cell*.055),0,Math.PI*2);ctx.fill();}
+    for(let y=0;y<SIZE;y++) for(let x=0;x<SIZE;x++) {
+      const color=board[y][x]; if(color===EMPTY) continue;
+      const cx=edge+x*cell,cy=edge+y*cell,r=cell*.39;
+      const g=ctx.createRadialGradient(cx-r*.32,cy-r*.38,r*.05,cx,cy,r);
+      if(color===BLACK){g.addColorStop(0,"#62635d");g.addColorStop(.42,"#242520");g.addColorStop(1,"#11120f");}
+      else {g.addColorStop(0,"#fff");g.addColorStop(.62,"#fff");g.addColorStop(1,"#deded7");}
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+      if(color===WHITE){ctx.strokeStyle="#aaa99f";ctx.lineWidth=.8;ctx.stroke();}
+    }
+    const last=moves[moves.length-1];
+    if(last){ctx.fillStyle="#e76d4b";ctx.beginPath();ctx.arc(edge+last.x*cell,edge+last.y*cell,Math.max(2,cell*.095),0,Math.PI*2);ctx.fill();}
+  }
+  function boardPointFromEvent(event) {
+    const rect=boardElement.getBoundingClientRect(),cell=rect.width/SIZE;
+    return {x:Math.round((event.clientX-rect.left)/cell-.5),y:Math.round((event.clientY-rect.top)/cell-.5)};
   }
 
   function placeStone(x, y) {
@@ -278,6 +295,13 @@
       render();
     }
   }
+
+  boardElement.addEventListener("pointerdown", event => {
+    if (event.button !== 0) return;
+    const p = boardPointFromEvent(event);
+    if (inside(p.x, p.y)) placeStone(p.x, p.y);
+  });
+  window.addEventListener("resize", () => { if (!play.hidden) drawBoard(); });
 
   document.querySelectorAll("[data-mode]").forEach(button => {
     button.addEventListener("click", () => {
