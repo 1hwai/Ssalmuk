@@ -226,3 +226,9 @@ legend { margin-bottom: 10px; font-size: 13px; font-weight: 800; }
 .capture-count b { margin-left:3px; font-variant-numeric:tabular-nums; }
 .capture-divider { color:var(--line); }
 @media (max-width:480px) { .capture-count { min-height:38px; margin-top:8px; font-size:12px; } .game-actions { flex-wrap:wrap; } .game-actions button { flex:1 1 calc(50% - 7px); } }
+
+.footer { flex-wrap: wrap; gap: 10px 14px; }
+.footer-links { display: flex; gap: 12px; }
+.footer-links a { color: inherit; text-decoration: none; }
+.footer-links a:hover { text-decoration: underline; }
+.footer small { flex-basis: 100%; font-size: 10px; line-height: 1.6; }
