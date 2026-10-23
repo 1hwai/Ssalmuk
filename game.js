@@ -42,7 +42,7 @@
     thinking = false;
     home.hidden = true;
     play.hidden = false;
-    hint.textContent = mode === "ai" ? "검은 돌이 먼저 둬. AI는 흰 돌이야." : "검은 돌이 먼저 둬. 화면을 번갈아 보며 두면 돼.";
+    hint.textContent = mode === "ai" ? "흑돌 선공." : "흑돌 선.";
     render();
   }
 
@@ -81,11 +81,11 @@
     undoButton.disabled = moves.length === 0 || thinking;
     if (finished) return;
     if (thinking) {
-      statusTitle.textContent = "AI가 생각 중…";
-      statusDetail.textContent = "잠깐만 기다려 줘.";
+      statusTitle.textContent = `AI 차례(${turn === BLACK ? "흑" : "백"})`;
+      statusDetail.textContent = "로딩...";
     } else {
-      statusTitle.textContent = turn === BLACK ? "흑 차례 · 검은 돌" : "백 차례 · 흰 돌";
-      statusDetail.textContent = mode === "ai" && turn === WHITE ? "AI가 두는 중이야." : "원하는 교차점을 눌러 착수해.";
+      statusTitle.textContent = turn === BLACK ? "흑 차례" : "백 차례";
+      statusDetail.textContent = mode === "ai" && turn === WHITE ? "AI가 두는 중이야." : "클릭하여 착수.";
     }
   }
 
