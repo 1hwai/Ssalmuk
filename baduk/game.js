@@ -117,6 +117,59 @@
     return state.mode === "ai" && state.turn !== state.humanColor && !state.finished;
   }
 
+  function ensureNeuralEngine() {
+    if (engineLoadPromise) return engineLoadPromise;
+    if (!engineFrame.getAttribute("src")) engineFrame.src = "./engine.html";
+    engineLoadPromise = new Promise((resolve, reject) => {
+      const started = Date.now();
+      function poll() {
+        const engine = engineFrame.contentWindow;
+        if (engine && typeof engine.kataChooseMove === "function" && typeof engine.kataReset === "function" && engine.danModel && engine.kyuModel) {
+          resolve(engine);
+          return;
+        }
+        if (Date.now() - started > 180000) {
+          engineLoadPromise = null;
+          reject(new Error("KataNet model loading timed out."));
+          return;
+        }
+        setTimeout(poll, 200);
+      }
+      poll();
+    });
+    return engineLoadPromise;
+  }
+
+  async function rebuildNeuralEngine() {
+    if (!state || state.mode !== "ai") return;
+    state.engineLoading = true;
+    state.aiThinking = true;
+    render();
+    try {
+      const engine = await ensureNeuralEngine();
+      if (!state || state.mode !== "ai") return;
+      engine.kataReset();
+      for (const action of state.neuralHistory) {
+        if (action.pass) engine.kataPass();
+        else if (!engine.kataPlace(action.x, action.y, action.color, state.size)) {
+          throw new Error("Could not restore neural engine move history.");
+        }
+      }
+      state.engineLoading = false;
+      state.aiThinking = false;
+      state.engineError = false;
+      render();
+      maybeStartAI();
+    } catch (error) {
+      if (!state) return;
+      state.engineLoading = false;
+      state.aiThinking = false;
+      state.engineError = true;
+      render();
+      gameHint.textContent = "AI 대국 상태를 복원하지 못했습니다. 새 대국을 시작하십시오.";
+    }
+  }
+
   function tryPlay(index, color = state.turn, fromAI = false) {
     if (!state || state.finished || state.aiThinking && !fromAI || color !== state.turn) return false;
     const move = simulateMove(state.board, index, color, state.size);
@@ -130,7 +183,18 @@
       return false;
     }
 
+    if (state.mode === "ai") {
+      const engine = engineFrame.contentWindow;
+      const x = index % state.size;
+      const y = Math.floor(index / state.size);
+      if (!engine || typeof engine.kataPlace !== "function" || !engine.kataPlace(x, y, color, state.size)) {
+        if (!fromAI) gameHint.textContent = "AI 엔진과 대국 상태가 일치하지 않습니다. 새 대국을 시작하십시오.";
+        return false;
+      }
+    }
+
     saveUndoPoint();
+    state.neuralHistory.push({ x: index % state.size, y: Math.floor(index / state.size), color });
     state.board = move.board;
     state.turn = -color;
     state.consecutivePasses = 0;
@@ -145,7 +209,13 @@
 
   function passTurn() {
     if (!state || state.finished || state.aiThinking) return;
+    if (state.mode === "ai") {
+      const engine = engineFrame.contentWindow;
+      if (!engine || typeof engine.kataPass !== "function") return;
+      engine.kataPass();
+    }
     saveUndoPoint();
+    state.neuralHistory.push({ pass: true, color: state.turn });
     state.moveCount += 1;
     state.lastMove = -1;
     state.consecutivePasses += 1;
