@@ -280,6 +280,7 @@
     return {
       size: state.size, mode: state.mode, humanColor: state.humanColor,
       difficulty: state.difficulty, rules: state.rules, characterId: state.characterId,
+      dialogueLine: state.dialogueLine,
       board: state.board.slice(), turn: state.turn,
       captures: { ...state.captures }, consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
       lastMove: state.lastMove, finished: state.finished,
