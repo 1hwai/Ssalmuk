@@ -254,18 +254,18 @@
     if (moves.length === 0 || thinking) return;
     clearTimeout(aiTimer);
     if (mode === "ai") {
-      // Undo the latest human move and the adjacent AI move.
       if (!moves.some(move => move.color === humanColor)) return;
-      const last = moves.pop();
-      board[last.y][last.x] = EMPTY;
-      if (last.color === aiColor && moves.length && moves[moves.length - 1].color === humanColor) {
-        const playerMove = moves.pop();
-        board[playerMove.y][playerMove.x] = EMPTY;
-      } else if (last.color === humanColor && moves.length && moves[moves.length - 1].color === aiColor) {
+      if (humanColor === BLACK) {
         const aiMove = moves.pop();
         board[aiMove.y][aiMove.x] = EMPTY;
+        const playerMove = moves.pop();
+        board[playerMove.y][playerMove.x] = EMPTY;
+        turn = BLACK;
+      } else {
+        const playerMove = moves.pop();
+        board[playerMove.y][playerMove.x] = EMPTY;
+        turn = WHITE;
       }
-      turn = BLACK;
     } else {
       const last = moves.pop();
       board[last.y][last.x] = EMPTY;
