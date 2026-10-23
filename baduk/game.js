@@ -142,12 +142,13 @@
 
   async function rebuildNeuralEngine() {
     if (!state || state.mode !== "ai") return;
+    const requestedState = state;
     state.engineLoading = true;
     state.aiThinking = true;
     render();
     try {
       const engine = await ensureNeuralEngine();
-      if (!state || state.mode !== "ai") return;
+      if (state !== requestedState || state.mode !== "ai") return;
       engine.kataReset();
       for (const action of state.neuralHistory) {
         if (action.pass) engine.kataPass();
@@ -330,14 +331,15 @@
     if (!state || !isAiTurn() || state.aiThinking || state.engineLoading || state.engineError) return;
     state.aiThinking = true;
     render();
+    const requestedState = state;
     aiTimer = setTimeout(async () => {
       aiTimer = null;
-      if (!state || state.finished || !isAiTurn()) return;
+      if (state !== requestedState || state.finished || !isAiTurn()) return;
       try {
         const engine = await ensureNeuralEngine();
-        if (!state || state.finished || !isAiTurn()) return;
+        if (state !== requestedState || state.finished || !isAiTurn()) return;
         const move = await engine.kataChooseMove(state.size, state.difficulty);
-        if (!state || state.finished || !isAiTurn()) return;
+        if (state !== requestedState || state.finished || !isAiTurn()) return;
         state.aiThinking = false;
         if (!move) passTurnFromAI();
         else if (!tryPlay(move.y * state.size + move.x, state.turn, true)) passTurnFromAI();
