@@ -15,7 +15,7 @@
   const passButton = $("pass-button");
   const scoreRequestButton = $("score-request-button");
   const newButton = $("new-button");
-  const engineFrame = $("kata-engine");
+  const engineFrame = $("ssalmuk-engine");
   let engineLoadPromise = null;
 
   const EMPTY = 0;
@@ -298,7 +298,7 @@
     return state.mode === "ai" && state.turn !== state.humanColor && !state.finished;
   }
 
-  function ensureNeuralEngine() {
+  function ensureAIEngine() {
     if (location.protocol === "file:") {
       return Promise.reject(new Error("The AI iframe requires http://localhost, not file://."));
     }
@@ -327,14 +327,14 @@
     return engineLoadPromise;
   }
 
-  async function rebuildNeuralEngine() {
+  async function rebuildAIEngine() {
     if (!state || state.mode !== "ai") return;
     const requestedState = state;
     state.engineLoading = true;
     state.aiThinking = true;
     render();
     try {
-      const engine = await ensureNeuralEngine();
+      const engine = await ensureAIEngine();
       if (state !== requestedState || state.mode !== "ai") return;
       engine.ssalmukReset(state.size);
       for (const action of state.engineHistory) {
@@ -507,7 +507,7 @@
       state.aiThinking = true;
       render();
       const requestedState = state;
-      ensureNeuralEngine().then(engine => {
+      ensureAIEngine().then(engine => {
         if (state !== requestedState || state.mode !== "ai") return;
         engine.ssalmukReset(state.size);
         state.engineHistory = [];
@@ -521,7 +521,7 @@
         state.aiThinking = false;
         state.engineError = true;
         render();
-        gameHint.textContent = location.protocol === "file:" ? "AI 대국은 file://에서 실행할 수 없습니다. 터미널에서 python3 -m http.server 8000을 실행한 뒤 http://localhost:8000/baduk/으로 접속하십시오." : "AI 엔진을 준비하지 못했습니다. 네트워크 연결을 확인한 뒤 새 대국을 시작하십시오.";
+        gameHint.textContent = location.protocol === "file:" ? "AI 대국은 file://에서 실행할 수 없습니다. 터미널에서 python3 -m http.server 8000을 실행한 뒤 http://localhost:8000/baduk/으로 접속하십시오." : "AI 엔진을 준비하지 못했습니다. 새 대국을 시작하십시오.";
       });
     } else {
       render();
@@ -644,7 +644,7 @@
       aiTimer = null;
       if (state !== requestedState || state.finished || !isAiTurn()) return;
       try {
-        const engine = await ensureNeuralEngine();
+        const engine = await ensureAIEngine();
         if (state !== requestedState || state.finished || !isAiTurn()) return;
         const legalMoves = [];
         for (let index = 0; index < state.board.length; index++) {
@@ -782,7 +782,7 @@
     };
     resultPanel.hidden = true;
     gameHint.textContent = "착수를 취소했습니다.";
-    if (state.mode === "ai") rebuildNeuralEngine();
+    if (state.mode === "ai") rebuildAIEngine();
     else {
       render();
       maybeStartAI();
