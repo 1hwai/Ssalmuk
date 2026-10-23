@@ -425,6 +425,7 @@
     const rules = $("scoring-rules").value;
     const characterId = mode === "ai" ? $("ai-character").value : null;
     state = freshState(size, mode, humanColor, difficulty, rules, characterId);
+    state.positionEval = evaluatePosition();
     if (mode === "ai" && CHARACTERS[characterId]) {
       state.dialogueLine = pickDialogue(CHARACTERS[characterId], "start");
     }
