@@ -437,6 +437,7 @@
       }
     }
 
+    const previousEval = state.positionEval ?? evaluatePosition(state.board);
     saveUndoPoint();
     state.neuralHistory.push({ x: index % state.size, y: Math.floor(index / state.size), color });
     state.board = move.board;
@@ -447,6 +448,7 @@
     state.lastMove = index;
     state.seen.add(key);
     state.aiThinking = false;
+    updateCharacterReaction(previousEval, color);
     render();
     maybeStartAI();
     return true;
@@ -545,7 +547,7 @@
     profile.hidden = false;
     $("opponent-name").textContent = character.name;
     $("opponent-description").textContent = (character.color === BLACK ? "흑돌" : "백돌") + " · " + character.gender;
-    $("opponent-emotion").textContent = character.emotion;
+    $("opponent-emotion").textContent = state.emotion || character.emotion;
     $("opponent-line").textContent = state.dialogueLine || pickDialogue(character, "start");
   }
 
