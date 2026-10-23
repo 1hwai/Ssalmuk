@@ -163,3 +163,58 @@ legend { margin-bottom: 10px; font-size: 13px; font-weight: 800; }
   .setup-screen .hero-boards { width: 27%; opacity: .1; }
   .setup-screen .hero-board .stone { width: 14%; }
 }
+
+/* AI character profile: the portrait placeholder is intentionally 3:4 until pixel art is ready. */
+.opponent-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  margin: 0 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+.opponent-portrait {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 96px;
+  aspect-ratio: 3 / 4;
+  border: 1px dashed #bcb4a5;
+  border-radius: 10px;
+  background:
+    radial-gradient(ellipse at 50% 25%, #e9e5da 0, transparent 70%),
+    #efebe2;
+  color: var(--accent-dark);
+}
+.opponent-emotion {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+.opponent-info { min-width: 0; }
+.opponent-info .eyebrow { margin-bottom: 5px; }
+.opponent-info h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -.05em;
+}
+.opponent-description {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.opponent-line {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.opponent-profile[hidden] { display: none; }
+@media (max-width: 420px) {
+  .opponent-profile { gap: 12px; padding: 10px; }
+  .opponent-portrait { width: 82px; }
+  .opponent-emotion { font-size: 16px; }
+  .opponent-info h2 { font-size: 20px; }
+  .opponent-line { margin-top: 8px; font-size: 12px; }
+}
