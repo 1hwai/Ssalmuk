@@ -153,6 +153,8 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
     linear-gradient(to bottom, rgba(47,57,47,.8) 1px, transparent 1px);
   background-size: 25% 100%, 100% 25%;
   background-position: left top; background-repeat: repeat-x, repeat-y;
+  border-right: 1px solid rgba(47,57,47,.8);
+  border-bottom: 1px solid rgba(47,57,47,.8);
 }
 .hero-board .stone {
   position: absolute; left: var(--x); top: var(--y);
