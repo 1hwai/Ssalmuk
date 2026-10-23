@@ -118,10 +118,12 @@
       <div class="board-wrap">
         <canvas id="board" class="board" role="grid" aria-label="바둑판" tabindex="0"></canvas>
       </div>
+      <div class="capture-count" aria-live="polite"><strong>따낸 돌</strong><span class="capture-divider">|</span><span>흑 <b id="black-captures">0</b></span><span>백 <b id="white-captures">0</b></span></div>
 
       <div class="game-actions">
         <button id="undo-button" class="secondary-button" type="button">한 수 무르기</button>
         <button id="pass-button" class="secondary-button" type="button">패스</button>
+        <button id="score-request-button" class="secondary-button" type="button">계가 요청</button>
         <button id="new-button" class="primary-button" type="button">새 대국</button>
       </div>
       <div id="result-panel" class="result-panel" hidden aria-live="polite"></div>
