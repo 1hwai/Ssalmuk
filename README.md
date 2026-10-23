@@ -11,7 +11,7 @@
 - 외부 라이브러리 및 빌드 과정 없음
 
 ## 실행
-`index.html`을 브라우저에서 열면 된다. 로컬 서버나 패키지 설치는 필요 없다.
+오목은 `index.html`을 브라우저에서 직접 열어도 된다. 바둑 신경망 AI는 iframe 출처 보안 때문에 로컬 HTTP 서버에서 실행해야 한다. 저장소 루트에서 `python3 -m http.server 8000`을 실행한 뒤 `http://localhost:8000/` 또는 `http://localhost:8000/baduk/`으로 접속한다. 패키지 설치나 빌드는 필요 없다.
 
 ## Cloudflare Pages 배포
 저장소 전체가 아니라 `ssalmuk` 폴더만 별도 프로젝트로 배포하려면 Cloudflare Pages의 **Root directory**를 `ssalmuk`으로 설정한다. 프레임워크는 None, 빌드 명령은 비워 두고, 출력 디렉터리는 `/` 또는 대시보드가 요구하는 기본값으로 설정한다.
