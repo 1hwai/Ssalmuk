@@ -162,7 +162,7 @@
       render();
       maybeStartAI();
     } catch (error) {
-      if (!state) return;
+      if (state !== requestedState) return;
       state.engineLoading = false;
       state.aiThinking = false;
       state.engineError = true;
@@ -247,8 +247,9 @@
       state.engineLoading = true;
       state.aiThinking = true;
       render();
+      const requestedState = state;
       ensureNeuralEngine().then(engine => {
-        if (!state || state.mode !== "ai") return;
+        if (state !== requestedState || state.mode !== "ai") return;
         engine.kataReset();
         state.neuralHistory = [];
         state.engineLoading = false;
@@ -256,7 +257,7 @@
         render();
         maybeStartAI();
       }).catch(() => {
-        if (!state || state.mode !== "ai") return;
+        if (state !== requestedState || state.mode !== "ai") return;
         state.engineLoading = false;
         state.aiThinking = false;
         state.engineError = true;
@@ -344,7 +345,7 @@
         if (!move) passTurnFromAI();
         else if (!tryPlay(move.y * state.size + move.x, state.turn, true)) passTurnFromAI();
       } catch (error) {
-        if (!state) return;
+        if (state !== requestedState) return;
         state.aiThinking = false;
         state.engineError = true;
         render();
