@@ -125,3 +125,6 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
 
 /* Canvas board uses a single fixed coordinate system for all intersections. */
 .board { display:block; width:100%; height:auto; aspect-ratio:1; }
+
+/* Canvas board uses one fixed coordinate system for every intersection. */
+.board { display:block; width:100%; height:auto; aspect-ratio:1; }
