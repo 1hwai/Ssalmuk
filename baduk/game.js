@@ -21,6 +21,12 @@
   const BLACK = 1;
   const WHITE = -1;
   const KOMI = { korean: 6.5, japanese: 6.5, chinese: 7.5 };
+  const CHARACTERS = {
+    black1: { id: "black1", name: "우현", color: BLACK, gender: "남성", emotion: "냉철", line: "차분하게 한 수씩 둬 보죠." },
+    black2: { id: "black2", name: "이현", color: BLACK, gender: "여성", emotion: "냉철", line: "서두르지 말고, 제대로 생각해 봐요." },
+    white1: { id: "white1", name: "백강", color: WHITE, gender: "남성", emotion: "냉철", line: "차분하게 한 수씩 둬 보죠." },
+    white2: { id: "white2", name: "백서아", color: WHITE, gender: "여성", emotion: "냉철", line: "어떤 수를 보여 주실지 기대할게요." }
+  };
   const STAR_POINTS = {
     9: [2, 4, 6],
     13: [3, 6, 9],
@@ -33,7 +39,7 @@
   function freshState(size, mode, humanColor, difficulty, rules) {
     const board = Array(size * size).fill(EMPTY);
     return {
-      size, mode, humanColor, difficulty, rules, board, turn: BLACK,
+      size, mode, humanColor, difficulty, rules, characterId, board, turn: BLACK,
       captures: { black: 0, white: 0 }, consecutivePasses: 0, moveCount: 0, lastMove: -1,
       finished: false, aiThinking: false, engineLoading: false, engineError: false,
       seen: new Set([boardKey(board)]), neuralHistory: [], past: []
@@ -101,7 +107,8 @@
   function snapshot() {
     return {
       size: state.size, mode: state.mode, humanColor: state.humanColor,
-      difficulty: state.difficulty, rules: state.rules, board: state.board.slice(), turn: state.turn,
+      difficulty: state.difficulty, rules: state.rules, characterId: state.characterId,
+      board: state.board.slice(), turn: state.turn,
       captures: { ...state.captures }, consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
       lastMove: state.lastMove, finished: state.finished,
       aiThinking: false, engineLoading: false, engineError: false,
@@ -243,11 +250,14 @@
     const humanColor = Number(document.querySelector('input[name="player-color"]:checked').value);
     const difficulty = $("ai-difficulty").value;
     const rules = $("scoring-rules").value;
-    state = freshState(size, mode, humanColor, difficulty, rules);
+    const characterId = mode === "ai" ? $("ai-character").value : null;
+    state = freshState(size, mode, humanColor, difficulty, rules, characterId);
     setupScreen.hidden = true;
     gameScreen.hidden = false;
     resultPanel.hidden = true;
     $("game-title").textContent = size + " × " + size + " 바둑";
+    $("opponent-profile").hidden = mode !== "ai";
+    renderOpponentProfile();
     gameHint.textContent = mode === "ai"
       ? (humanColor === BLACK ? "사용자는 흑돌입니다. 흑돌이 먼저 둡니다." : "사용자는 백돌입니다. AI가 흑돌로 선공합니다.")
       : "흑돌이 먼저 둡니다. 두 차례 연속 패스하면 대국이 종료됩니다.";
@@ -277,9 +287,48 @@
     }
   }
 
+  function renderOpponentProfile() {
+    const profile = $("opponent-profile");
+    if (!state || state.mode !== "ai" || !state.characterId) {
+      profile.hidden = true;
+      return;
+    }
+    const character = CHARACTERS[state.characterId];
+    if (!character) {
+      profile.hidden = true;
+      return;
+    }
+    profile.hidden = false;
+    $("opponent-name").textContent = character.name;
+    $("opponent-description").textContent = (character.color === BLACK ? "흑돌" : "백돌") + " · " + character.gender;
+    $("opponent-emotion").textContent = character.emotion;
+    $("opponent-line").textContent = character.line;
+  }
+
+  function updateCharacterOptions() {
+    const select = $("ai-character");
+    if (!select) return;
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const humanColor = Number(document.querySelector('input[name="player-color"]:checked').value);
+    const aiColor = -humanColor;
+    const available = Object.values(CHARACTERS).filter(character => character.color === aiColor);
+    const previous = select.value;
+    select.replaceChildren();
+    for (const character of available) {
+      const option = document.createElement("option");
+      option.value = character.id;
+      option.textContent = character.name;
+      select.append(option);
+    }
+    if (available.some(character => character.id === previous)) select.value = previous;
+    else if (available.length) select.value = available[0].id;
+    $("ai-character-field").hidden = mode !== "ai";
+  }
+
   function render() {
     if (!state) return;
     boardElement.setAttribute("aria-label", state.size + " 곱하기 " + state.size + " 바둑판");
+    renderOpponentProfile();
     drawBoard();
 
     turnStone.className = "turn-stone " + (state.turn === BLACK ? "black" : "white");
@@ -497,8 +546,13 @@
       $("color-field").hidden = !aiMode;
       $("difficulty-field").hidden = !aiMode;
       if (!aiMode) document.querySelector('input[name="player-color"][value="1"]').checked = true;
+      updateCharacterOptions();
     });
   });
+  document.querySelectorAll('input[name="player-color"]').forEach(input => {
+    input.addEventListener("change", updateCharacterOptions);
+  });
+  updateCharacterOptions();
   boardElement.addEventListener("pointerdown", event => {
     if (!state || event.button !== 0) return;
     const index = boardPointFromEvent(event);
