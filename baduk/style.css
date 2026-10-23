@@ -218,3 +218,11 @@ legend { margin-bottom: 10px; font-size: 13px; font-weight: 800; }
   .opponent-info h2 { font-size: 20px; }
   .opponent-line { margin-top: 8px; font-size: 12px; }
 }
+
+
+/* Captured-stone counter beneath the board. */
+.capture-count { display:flex; align-items:center; justify-content:center; gap:10px; min-height:42px; margin-top:10px; padding:8px 12px; border:1px solid var(--line); border-radius:11px; background:var(--card); font-size:13px; }
+.capture-count > strong { font-size:12px; }
+.capture-count b { margin-left:3px; font-variant-numeric:tabular-nums; }
+.capture-divider { color:var(--line); }
+@media (max-width:480px) { .capture-count { min-height:38px; margin-top:8px; font-size:12px; } .game-actions { flex-wrap:wrap; } .game-actions button { flex:1 1 calc(50% - 7px); } }
