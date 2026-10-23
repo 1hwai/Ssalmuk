@@ -14,6 +14,8 @@
   const undoButton = $("undo-button");
   const passButton = $("pass-button");
   const newButton = $("new-button");
+  const engineFrame = $("kata-engine");
+  let engineLoadPromise = null;
 
   const EMPTY = 0;
   const BLACK = 1;
@@ -28,13 +30,13 @@
   let state = null;
   let aiTimer = null;
 
-  function freshState(size, mode, humanColor) {
+  function freshState(size, mode, humanColor, difficulty) {
     const board = Array(size * size).fill(EMPTY);
     return {
-      size, mode, humanColor, board, turn: BLACK,
+      size, mode, humanColor, difficulty, board, turn: BLACK,
       consecutivePasses: 0, moveCount: 0, lastMove: -1,
-      finished: false, aiThinking: false, seen: new Set([boardKey(board)]),
-      past: []
+      finished: false, aiThinking: false, engineLoading: false, engineError: false,
+      seen: new Set([boardKey(board)]), neuralHistory: [], past: []
     };
   }
 
@@ -99,10 +101,11 @@
   function snapshot() {
     return {
       size: state.size, mode: state.mode, humanColor: state.humanColor,
-      board: state.board.slice(), turn: state.turn,
+      difficulty: state.difficulty, board: state.board.slice(), turn: state.turn,
       consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
       lastMove: state.lastMove, finished: state.finished,
-      aiThinking: false, seen: new Set(state.seen)
+      aiThinking: false, engineLoading: false, engineError: false,
+      seen: new Set(state.seen), neuralHistory: state.neuralHistory.slice()
     };
   }
 
@@ -160,7 +163,8 @@
     const mode = document.querySelector('input[name="mode"]:checked').value;
     const size = Number(document.querySelector('input[name="board-size"]:checked').value);
     const humanColor = Number(document.querySelector('input[name="player-color"]:checked').value);
-    state = freshState(size, mode, humanColor);
+    const difficulty = $("ai-difficulty").value;
+    state = freshState(size, mode, humanColor, difficulty);
     setupScreen.hidden = true;
     gameScreen.hidden = false;
     resultPanel.hidden = true;
@@ -168,8 +172,29 @@
     gameHint.textContent = mode === "ai"
       ? (humanColor === BLACK ? "사용자는 흑돌입니다. 흑돌이 먼저 둡니다." : "사용자는 백돌입니다. AI가 흑돌로 선공합니다.")
       : "흑돌이 먼저 둡니다. 두 차례 연속 패스하면 대국이 종료됩니다.";
-    render();
-    maybeStartAI();
+    if (mode === "ai") {
+      state.engineLoading = true;
+      state.aiThinking = true;
+      render();
+      ensureNeuralEngine().then(engine => {
+        if (!state || state.mode !== "ai") return;
+        engine.kataReset();
+        state.neuralHistory = [];
+        state.engineLoading = false;
+        state.aiThinking = false;
+        render();
+        maybeStartAI();
+      }).catch(() => {
+        if (!state || state.mode !== "ai") return;
+        state.engineLoading = false;
+        state.aiThinking = false;
+        state.engineError = true;
+        render();
+        gameHint.textContent = "AI 모델을 불러오지 못했습니다. 네트워크 연결을 확인한 뒤 새 대국을 시작하십시오.";
+      });
+    } else {
+      render();
+    }
   }
 
   function render() {
