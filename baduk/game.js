@@ -357,6 +357,63 @@
     }
   }
 
+  function evaluatePosition(board = state.board) {
+    // Heuristic estimate for character reactions, not an official Go score.
+    const size = state.size;
+    let black = state.captures.black;
+    let white = state.captures.white + KOMI[state.rules || "korean"];
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] === BLACK) black += 1;
+      else if (board[i] === WHITE) white += 1;
+      else {
+        const x = i % size, y = Math.floor(i / size);
+        let blackInfluence = 0, whiteInfluence = 0;
+        for (let j = 0; j < board.length; j++) {
+          const stone = board[j];
+          if (stone === EMPTY) continue;
+          const distance = Math.abs(x - j % size) + Math.abs(y - Math.floor(j / size));
+          if (distance > 4) continue;
+          const influence = 0.72 ** distance;
+          if (stone === BLACK) blackInfluence = Math.max(blackInfluence, influence);
+          else whiteInfluence = Math.max(whiteInfluence, influence);
+        }
+        black += blackInfluence * 0.45;
+        white += whiteInfluence * 0.45;
+      }
+    }
+    return black - white;
+  }
+
+  function updateCharacterReaction(previousEval, moverColor) {
+    if (!state || state.mode !== "ai") return;
+    const character = CHARACTERS[state.characterId];
+    if (!character) return;
+    const perspective = character.color;
+    const currentEval = evaluatePosition();
+    const oldAdvantage = previousEval * perspective;
+    const newAdvantage = currentEval * perspective;
+    const swing = newAdvantage - oldAdvantage;
+    state.positionEval = currentEval;
+
+    let category = "normal";
+    const threshold = Math.max(1.5, state.size * 0.16);
+    if (state.finished) category = "result";
+    else if (moverColor !== perspective && swing <= -threshold) category = "opponentGoodMove";
+    else if (moverColor !== perspective && swing >= threshold) category = "opponentMistake";
+
+    if (category === "normal") {
+      if (newAdvantage > Math.max(2, state.size * 0.2) && swing > 0.25) state.emotion = "기쁨";
+      else if (newAdvantage < -Math.max(2, state.size * 0.2) && swing < -0.25) {
+        state.emotion = Math.abs(swing) >= Math.max(2.5, state.size * 0.25) ? "화남" : "냉랭";
+      } else if (Math.abs(swing) < 0.25) state.emotion = "냉철";
+      else state.emotion = newAdvantage < 0 ? "냉랭" : "냉철";
+    } else if (category === "opponentGoodMove") state.emotion = "수줍음";
+    else if (category === "opponentMistake") state.emotion = "기쁨";
+    else state.emotion = "냉철";
+
+    state.dialogueLine = pickDialogue(character, category);
+  }
+
   function tryPlay(index, color = state.turn, fromAI = false) {
     if (!state || state.finished || state.aiThinking && !fromAI || color !== state.turn) return false;
     const move = simulateMove(state.board, index, color, state.size);
