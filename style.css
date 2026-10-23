@@ -62,9 +62,11 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
 .status-copy strong { font-size: 13px; }
 .status-copy span { color: var(--muted); font-size: 11px; }
 .move-count { margin-left: auto; color: var(--muted); font: 11px "DM Mono", monospace; }
+.difficulty-control { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.difficulty-control select { max-width: 90px; padding: 6px 7px; border: 1px solid var(--line); border-radius: 8px; background: #fffef9; color: var(--ink); font: inherit; cursor: pointer; }
 .board-wrap { width: 100%; padding: clamp(7px, 2vw, 13px); border-radius: 5px; background: var(--board); box-shadow: 0 7px 0 #c89e5d, 0 12px 22px #4a35181c; touch-action: manipulation; }
-.board { --cell: calc(100% / 14); display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); aspect-ratio: 1; background-image: linear-gradient(to right, var(--board-line) 1px, transparent 1px), linear-gradient(to bottom, var(--board-line) 1px, transparent 1px); background-size: var(--cell) var(--cell); background-position: center center; }
-.cell { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.board { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); aspect-ratio: 1; }
+.cell { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; border: 0; background-color: transparent; background-image: linear-gradient(var(--board-line), var(--board-line)), linear-gradient(var(--board-line), var(--board-line)); background-repeat: no-repeat; background-position: center center; background-size: 1px 100%, 100% 1px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .cell::before { content: ""; width: 78%; height: 78%; border-radius: 50%; transform: scale(0); transition: transform .1s ease; }
 .cell.black::before { transform: scale(1); background: radial-gradient(circle at 32% 25%, #62635d 0, #242520 40%, #11120f 100%); box-shadow: 1px 2px 3px #0006; }
 .cell.white::before { transform: scale(1); background: radial-gradient(circle at 32% 25%, #fff 0, #fff 45%, #deded7 100%); border: 1px solid #aaa99f; box-shadow: 1px 2px 3px #0003; }
@@ -89,7 +91,9 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
   .mode-icon { width: 42px; height: 42px; flex-basis: 42px; }
   .play-screen { padding-top: 20px; }
   .game-title h1 { font-size: 21px; }
-  .status-card { padding: 11px 12px; }
+  .status-card { padding: 11px 10px; gap: 9px; }
+  .difficulty-control { gap: 4px; font-size: 10px; }
+  .difficulty-control select { max-width: 76px; padding: 5px 4px; }
   .footer { min-height: 52px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
