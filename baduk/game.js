@@ -278,7 +278,7 @@
       }
     }
     if (!choices.length) return -1;
-    if (state.moveCount > state.size * 0.7 && best < 1.5) return -1;
+    if (state.moveCount > state.size * 2 && best < 1.5) return -1;
     return choices[Math.floor(Math.random() * choices.length)];
   }
 
