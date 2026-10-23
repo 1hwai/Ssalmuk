@@ -42,6 +42,18 @@
           <label class="choice"><input type="radio" name="player-color" value="1" checked><span class="stone-preview black"></span><span><strong>흑돌</strong><small>먼저 착수</small></span></label>
           <label class="choice"><input type="radio" name="player-color" value="-1"><span class="stone-preview white"></span><span><strong>백돌</strong><small>AI가 흑돌로 선공</small></span></label>
         </fieldset>
+        <fieldset>
+          <legend for="scoring-rules">계가 규칙</legend>
+          <label class="difficulty-choice" for="scoring-rules">
+            <span>규칙</span>
+            <select id="scoring-rules" name="scoring-rules">
+              <option value="korean" selected>한국식 · 영역계가</option>
+              <option value="japanese">일본식 · 영역계가</option>
+              <option value="chinese">중국식 · 집+돌 계가</option>
+            </select>
+          </label>
+          <p class="rules-note">한국식과 일본식은 이 간이 계가에서 같은 영역계가 방식으로 계산합니다.</p>
+        </fieldset>
         <fieldset id="difficulty-field">
           <legend>AI 난이도</legend>
           <label class="difficulty-choice" for="ai-difficulty">
@@ -56,7 +68,7 @@
         </fieldset>
         <button id="start-button" class="primary-button full-button" type="button">대국 시작</button>
       </div>
-      <p class="tiny-note">기본 계가 기준: 집 + 살아 있는 돌 · 백 덤 6.5집</p>
+      <p class="tiny-note">기본 계가 기준: 한국식 · 영역계가 · 백 덤 6.5집</p>
     </section>
 
     <section id="game-screen" class="game-screen" hidden>
