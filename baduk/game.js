@@ -284,7 +284,7 @@
       button.className = "intersection";
       button.setAttribute("role", "gridcell");
       button.setAttribute("aria-label", pointLabel(i));
-      button.disabled = state.finished || state.aiThinking || isAiTurn() || state.board[i] !== EMPTY;
+      button.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn() || state.board[i] !== EMPTY;
       if (stars.has(i)) {
         const star = document.createElement("span");
         star.className = "star";
@@ -310,12 +310,14 @@
     turnStone.className = "turn-stone " + (state.turn === BLACK ? "black" : "white");
     statusTitle.textContent = state.finished ? "대국 종료" : (state.turn === BLACK ? "흑 차례" : "백 차례");
     if (state.finished) statusDetail.textContent = "계가 결과를 확인하십시오.";
-    else if (state.aiThinking) statusDetail.textContent = "AI가 다음 수를 계산하고 있습니다.";
+    else if (state.engineError) statusDetail.textContent = "AI 엔진을 사용할 수 없습니다.";
+    else if (state.engineLoading) statusDetail.textContent = "신경망 AI 모델을 불러오는 중입니다.";
+    else if (state.aiThinking) statusDetail.textContent = "신경망 AI가 다음 수를 계산하고 있습니다.";
     else if (state.mode === "ai" && state.turn !== state.humanColor) statusDetail.textContent = "AI 대국 중";
     else statusDetail.textContent = "교차점을 선택하여 착수하십시오.";
     moveCount.textContent = state.moveCount + "수";
-    undoButton.disabled = state.past.length === 0 || state.aiThinking || (state.mode === "ai" && state.moveCount < (state.humanColor === BLACK ? 2 : 3));
-    passButton.disabled = state.finished || state.aiThinking || isAiTurn();
+    undoButton.disabled = state.past.length === 0 || state.aiThinking || state.engineLoading || (state.mode === "ai" && !state.neuralHistory.some(action => !action.pass && action.color === state.humanColor));
+    passButton.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn();
     if (!state.finished) resultPanel.hidden = true;
   }
 
@@ -325,23 +327,42 @@
   }
 
   function maybeStartAI() {
-    if (!isAiTurn() || state.aiThinking) return;
+    if (!state || !isAiTurn() || state.aiThinking || state.engineLoading || state.engineError) return;
     state.aiThinking = true;
     render();
-    aiTimer = setTimeout(() => {
+    aiTimer = setTimeout(async () => {
       aiTimer = null;
       if (!state || state.finished || !isAiTurn()) return;
-      const move = chooseAIMove();
-      state.aiThinking = false;
-      if (move < 0) passTurnFromAI();
-      else if (!tryPlay(move, state.turn, true)) passTurnFromAI();
-    }, 140);
+      try {
+        const engine = await ensureNeuralEngine();
+        if (!state || state.finished || !isAiTurn()) return;
+        const move = await engine.kataChooseMove(state.size, state.difficulty);
+        if (!state || state.finished || !isAiTurn()) return;
+        state.aiThinking = false;
+        if (!move) passTurnFromAI();
+        else if (!tryPlay(move.y * state.size + move.x, state.turn, true)) passTurnFromAI();
+      } catch (error) {
+        if (!state) return;
+        state.aiThinking = false;
+        state.engineError = true;
+        render();
+        gameHint.textContent = "신경망 AI 계산에 실패했습니다. 새 대국을 시작하십시오.";
+      }
+    }, 80);
   }
 
   function passTurnFromAI() {
     if (!state || state.finished || !isAiTurn()) return;
-    state.aiThinking = false;
+    const engine = engineFrame.contentWindow;
+    if (!engine || typeof engine.kataPass !== "function") {
+      state.engineError = true;
+      render();
+      return;
+    }
+    engine.kataPass();
     saveUndoPoint();
+    state.neuralHistory.push({ pass: true, color: state.turn });
+    state.aiThinking = false;
     state.moveCount += 1;
     state.lastMove = -1;
     state.consecutivePasses += 1;
@@ -352,79 +373,6 @@
     }
     render();
     maybeStartAI();
-  }
-
-  function chooseAIMove() {
-    let best = -Infinity;
-    let choices = [];
-    const size = state.size;
-    for (let i = 0; i < state.board.length; i++) {
-      if (state.board[i] !== EMPTY) continue;
-      const result = simulateMove(state.board, i, state.turn, size);
-      if (!result) continue;
-      const key = boardKey(result.board);
-      if (state.seen.has(key)) continue;
-      const score = evaluateMove(i, result, state.turn);
-      if (score > best) {
-        best = score;
-        choices = [i];
-      } else if (score >= best - 1.6) {
-        choices.push(i);
-      }
-    }
-    if (!choices.length) return -1;
-    if (state.moveCount > state.size * 2 && best < 1.5) return -1;
-    return choices[Math.floor(Math.random() * choices.length)];
-  }
-
-  function evaluateMove(index, result, color) {
-    const size = state.size;
-    const board = state.board;
-    const next = result.board;
-    const adjacent = neighbors(index, size);
-    let score = result.captured.length * 16;
-    score += Math.min(result.ownGroup.liberties.size, 8) * 1.25;
-    if (result.ownGroup.liberties.size === 1) score -= 24;
-    else if (result.ownGroup.liberties.size === 2) score -= 5;
-
-    for (const n of adjacent) {
-      if (board[n] === color) {
-        const group = groupAt(board, n, size);
-        if (group.liberties.size === 1) score += 12 + group.stones.length * 2;
-        else score += 2.5;
-      } else if (board[n] === -color) {
-        const group = groupAt(board, n, size);
-        if (group.liberties.size === 1) score += 13 + group.stones.length * 2;
-        else if (group.liberties.size === 2) score += 3;
-      } else {
-        score += 0.8;
-      }
-    }
-
-    let nearby = 0;
-    const x = index % size;
-    const y = Math.floor(index / size);
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-      if (!dx && !dy) continue;
-      const nx = x + dx, ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
-      const distance = Math.abs(dx) + Math.abs(dy);
-      const stone = board[ny * size + nx];
-      if (stone === color) nearby += distance === 1 ? 2.4 : distance === 2 ? 1.2 : 0.4;
-      if (stone === -color) nearby += distance === 1 ? 1.7 : distance === 2 ? 0.7 : 0.2;
-    }
-    score += Math.min(nearby, 10);
-    const edgeDistance = Math.min(x, y, size - 1 - x, size - 1 - y);
-    if (edgeDistance === 0) score -= 3;
-    else if (edgeDistance === 1) score += 0.3;
-    else if (edgeDistance === 2) score += 1.8;
-    else if (edgeDistance === 3) score += 1.2;
-
-    const ownEmptyNeighbors = adjacent.filter(n => next[n] === EMPTY).length;
-    const friendlyNeighbors = adjacent.filter(n => next[n] === color).length;
-    if (result.captured.length === 0 && friendlyNeighbors === adjacent.length && ownEmptyNeighbors === 0) score -= 15;
-    score += Math.random() * 0.8;
-    return score;
   }
 
   function scoreBoard() {
