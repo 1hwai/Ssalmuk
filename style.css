@@ -128,3 +128,18 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
 
 /* Canvas board uses one fixed coordinate system for every intersection. */
 .board { display:block; width:100%; height:auto; aspect-ratio:1; }
+
+
+/* Faint, CSS-only board motifs beside the home-page headline. */
+.intro { position: relative; isolation: isolate; }
+.intro > h1 { position: relative; z-index: 1; max-width: 62%; }
+.hero-boards { position: absolute; z-index: 0; right: 0; top: 50%; width: 43%; display: flex; justify-content: flex-end; align-items: center; gap: 12px; transform: translateY(-43%); pointer-events: none; opacity: .24; }
+.hero-board { position: relative; flex: 0 1 48%; aspect-ratio: 1; border-radius: 3px; background-color: #d8b77f; background-image: linear-gradient(to right, rgba(73,53,29,.7) 1px, transparent 1px), linear-gradient(to bottom, rgba(73,53,29,.7) 1px, transparent 1px); background-size: 12.5% 12.5%; background-position: center; box-shadow: inset 0 0 0 1px rgba(73,53,29,.25); }
+.hero-board .stone { position: absolute; left: var(--x); top: var(--y); width: 16%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%,-50%); }
+.hero-board .black { background: radial-gradient(circle at 32% 25%, #62635d 0, #242520 42%, #11120f 100%); box-shadow: 1px 2px 3px #0005; }
+.hero-board .white { background: radial-gradient(circle at 32% 25%, #fff 0, #fff 48%, #d5d0c5 100%); border: 1px solid #aaa99f; box-shadow: 1px 2px 3px #0003; }
+@media (max-width: 620px) {
+  .intro > h1 { max-width: 100%; }
+  .hero-boards { right: 0; top: 5px; width: 40%; transform: none; opacity: .13; gap: 5px; }
+}
+@media (max-width: 420px) { .hero-boards { width: 34%; opacity: .1; } }
