@@ -17,10 +17,15 @@
   const undoButton = document.querySelector("#undo-button");
   const difficultyControl = document.querySelector("#difficulty-control");
   const difficultySelect = document.querySelector("#difficulty-select");
+  const colorDialog = document.querySelector("#color-dialog");
+  const startAiButton = document.querySelector("#start-ai-button");
+  const cancelSetupButton = document.querySelector("#cancel-setup-button");
   let board = [];
   let moves = [];
   let mode = "ai";
   let difficulty = "intermediate";
+  let humanColor = BLACK;
+  let aiColor = WHITE;
   let turn = BLACK;
   let finished = false;
   let thinking = false;
@@ -30,11 +35,13 @@
     return Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
   }
 
-  function startGame(nextMode) {
+  function startGame(nextMode, selectedHumanColor = BLACK) {
     clearTimeout(aiTimer);
     mode = nextMode;
     difficultyControl.hidden = mode !== "ai";
     difficulty = difficultySelect.value;
+    humanColor = selectedHumanColor;
+    aiColor = humanColor === BLACK ? WHITE : BLACK;
     board = freshBoard();
     moves = [];
     turn = BLACK;
@@ -42,8 +49,15 @@
     thinking = false;
     home.hidden = true;
     play.hidden = false;
-    hint.textContent = mode === "ai" ? "흑돌 선공." : "흑돌 선.";
+    hint.textContent = mode === "ai" ? "선공 설정 완료." : "흑 선공.";
     render();
+    if (mode === "ai" && turn === aiColor) scheduleAiMove();
+  }
+
+  function scheduleAiMove() {
+    thinking = true;
+    render();
+    aiTimer = setTimeout(makeAiMove, 260);
   }
 
   function showHome() {
@@ -70,7 +84,7 @@
         if (board[y][x] === WHITE) cell.classList.add("white");
         const last = moves[moves.length - 1];
         if (last && last.x === x && last.y === y) cell.classList.add("last-move");
-        cell.disabled = finished || thinking || board[y][x] !== EMPTY || (mode === "ai" && turn === WHITE);
+        cell.disabled = finished || thinking || board[y][x] !== EMPTY || (mode === "ai" && turn === aiColor);
         cell.addEventListener("click", () => placeStone(x, y));
         fragment.append(cell);
       }
@@ -78,27 +92,29 @@
     boardElement.append(fragment);
     moveCount.textContent = `${moves.length}수`;
     turnStone.className = `turn-stone ${turn === BLACK ? "black-stone" : "white-stone"}`;
-    undoButton.disabled = moves.length === 0 || thinking;
+    undoButton.disabled = thinking || (mode === "ai"
+      ? !moves.some(move => move.color === humanColor)
+      : moves.length === 0);
     if (finished) return;
     if (thinking) {
-      statusTitle.textContent = `AI 차례(${turn === BLACK ? "흑" : "백"})`;
-      statusDetail.textContent = "로딩...";
+      statusTitle.textContent = `AI 차례 · ${turn === BLACK ? "흑" : "백"}`;
+      statusDetail.textContent = "AI 연산 중";
     } else {
       statusTitle.textContent = turn === BLACK ? "흑 차례" : "백 차례";
-      statusDetail.textContent = mode === "ai" && turn === WHITE ? "AI가 두는 중이야." : "클릭하여 착수.";
+      statusDetail.textContent = mode === "ai" && turn === aiColor ? "AI 착수 대기." : "교차점을 선택하여 착수하십시오.";
     }
   }
 
   function placeStone(x, y) {
-    if (finished || thinking || board[y][x] !== EMPTY || (mode === "ai" && turn === WHITE)) return;
+    if (finished || thinking || board[y][x] !== EMPTY || (mode === "ai" && turn === aiColor)) return;
     board[y][x] = turn;
     moves.push({ x, y, color: turn });
     if (hasWon(x, y, turn)) {
       finished = true;
       render();
       statusTitle.textContent = turn === BLACK ? "흑 승리!" : "백 승리!";
-      statusDetail.textContent = mode === "ai" && turn === BLACK ? "AI를 이겼어. 한 판 더?" : "멋진 한 판이었어!";
-      hint.textContent = "새 게임을 누르면 다시 시작할 수 있어.";
+      statusDetail.textContent = mode === "ai" && turn === humanColor ? "AI 대전 승리." : "대국 종료.";
+      hint.textContent = "새 게임으로 재대국할 수 있습니다.";
       return;
     }
     if (moves.length === SIZE * SIZE) {
@@ -109,10 +125,8 @@
       return;
     }
     turn = turn === BLACK ? WHITE : BLACK;
-    if (mode === "ai" && turn === WHITE) {
-      thinking = true;
-      render();
-      aiTimer = setTimeout(makeAiMove, 260);
+    if (mode === "ai" && turn === aiColor) {
+      scheduleAiMove();
     } else {
       render();
     }
@@ -144,17 +158,17 @@
     const move = chooseAiMove();
     thinking = false;
     if (move) {
-      board[move.y][move.x] = WHITE;
-      moves.push({ ...move, color: WHITE });
-      if (hasWon(move.x, move.y, WHITE)) {
+      board[move.y][move.x] = aiColor;
+      moves.push({ ...move, color: aiColor });
+      if (hasWon(move.x, move.y, aiColor)) {
         finished = true;
         render();
-        statusTitle.textContent = "백 승리!";
-        statusDetail.textContent = "AI가 이겼어. 복수전 갈까?";
-        hint.textContent = "새 게임을 눌러 다시 도전해 봐.";
+        statusTitle.textContent = `${aiColor === BLACK ? "흑" : "백"} 승리`;
+        statusDetail.textContent = "AI 대전 패배.";
+        hint.textContent = "새 게임으로 재대국할 수 있습니다.";
         return;
       }
-      turn = BLACK;
+      turn = humanColor;
     }
     render();
   }
@@ -175,8 +189,8 @@
     for (const index of candidates) {
       const x = index % SIZE;
       const y = Math.floor(index / SIZE);
-      const attack = scorePoint(x, y, WHITE);
-      const defend = scorePoint(x, y, BLACK);
+      const attack = scorePoint(x, y, aiColor);
+      const defend = scorePoint(x, y, humanColor);
       const centerBonus = 7 - (Math.abs(7 - x) + Math.abs(7 - y)) * 0.15;
       ranked.push({ x, y, attack, defend, centerBonus });
     }
@@ -240,14 +254,16 @@
     if (moves.length === 0 || thinking) return;
     clearTimeout(aiTimer);
     if (mode === "ai") {
-      // In solo mode, take back the latest player move and the AI reply.
-      if (moves[moves.length - 1]?.color === WHITE) {
-        const aiMove = moves.pop();
-        board[aiMove.y][aiMove.x] = EMPTY;
-      }
-      if (moves.length) {
+      // Undo the latest human move and the adjacent AI move.
+      if (!moves.some(move => move.color === humanColor)) return;
+      const last = moves.pop();
+      board[last.y][last.x] = EMPTY;
+      if (last.color === aiColor && moves.length && moves[moves.length - 1].color === humanColor) {
         const playerMove = moves.pop();
         board[playerMove.y][playerMove.x] = EMPTY;
+      } else if (last.color === humanColor && moves.length && moves[moves.length - 1].color === aiColor) {
+        const aiMove = moves.pop();
+        board[aiMove.y][aiMove.x] = EMPTY;
       }
       turn = BLACK;
     } else {
@@ -262,8 +278,17 @@
   }
 
   document.querySelectorAll("[data-mode]").forEach(button => {
-    button.addEventListener("click", () => startGame(button.dataset.mode));
+    button.addEventListener("click", () => {
+      if (button.dataset.mode === "ai") colorDialog.showModal();
+      else startGame("local");
+    });
   });
+  startAiButton.addEventListener("click", () => {
+    const selected = document.querySelector('input[name="player-color"]:checked');
+    colorDialog.close();
+    startGame("ai", selected ? Number(selected.value) : BLACK);
+  });
+  cancelSetupButton.addEventListener("click", () => colorDialog.close());
   document.querySelector("#back-button").addEventListener("click", showHome);
   document.querySelector("#restart-button").addEventListener("click", resetGame);
   document.querySelector("#new-button").addEventListener("click", resetGame);
@@ -272,6 +297,6 @@
     if (mode !== "ai") return;
     const selectedLabel = difficultySelect.selectedOptions[0].textContent;
     resetGame();
-    hint.textContent = `${selectedLabel} 난이도로 새 게임을 시작했어.`;
+    hint.textContent = `${selectedLabel} 난이도 적용.`;
   });
 })();
