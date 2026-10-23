@@ -15,9 +15,12 @@
   const moveCount = document.querySelector("#move-count");
   const hint = document.querySelector("#game-hint");
   const undoButton = document.querySelector("#undo-button");
+  const difficultyControl = document.querySelector("#difficulty-control");
+  const difficultySelect = document.querySelector("#difficulty-select");
   let board = [];
   let moves = [];
   let mode = "ai";
+  let difficulty = "intermediate";
   let turn = BLACK;
   let finished = false;
   let thinking = false;
@@ -30,6 +33,8 @@
   function startGame(nextMode) {
     clearTimeout(aiTimer);
     mode = nextMode;
+    difficultyControl.hidden = mode !== "ai";
+    difficulty = difficultySelect.value;
     board = freshBoard();
     moves = [];
     turn = BLACK;
@@ -166,18 +171,39 @@
         }
       }
     }
-    let best = null;
-    let bestScore = -Infinity;
+    const ranked = [];
     for (const index of candidates) {
       const x = index % SIZE;
       const y = Math.floor(index / SIZE);
       const attack = scorePoint(x, y, WHITE);
       const defend = scorePoint(x, y, BLACK);
       const centerBonus = 7 - (Math.abs(7 - x) + Math.abs(7 - y)) * 0.15;
-      const score = Math.max(attack * 1.08, defend) + attack * 0.18 + centerBonus + Math.random() * 0.2;
+      ranked.push({ x, y, attack, defend, centerBonus });
+    }
+
+    if (difficulty === "advanced" || difficulty === "expert") {
+      const winningMove = ranked.find(move => move.attack >= 1000000);
+      if (winningMove) return { x: winningMove.x, y: winningMove.y };
+      const blockingMove = ranked.find(move => move.defend >= 1000000);
+      if (blockingMove) return { x: blockingMove.x, y: blockingMove.y };
+    }
+
+    let best = null;
+    let bestScore = -Infinity;
+    for (const move of ranked) {
+      let score;
+      if (difficulty === "beginner") {
+        score = move.attack * 0.72 + move.defend * 0.62 + move.centerBonus + Math.random() * 90;
+      } else if (difficulty === "advanced") {
+        score = move.attack * 1.12 + move.defend * 1.04 + move.centerBonus + Math.random() * 0.35;
+      } else if (difficulty === "expert") {
+        score = move.attack * 1.18 + move.defend * 1.16 + move.centerBonus + Math.random() * 0.05;
+      } else {
+        score = Math.max(move.attack * 1.08, move.defend) + move.attack * 0.18 + move.centerBonus + Math.random() * 0.2;
+      }
       if (score > bestScore) {
         bestScore = score;
-        best = { x, y };
+        best = { x: move.x, y: move.y };
       }
     }
     return best;
@@ -242,4 +268,10 @@
   document.querySelector("#restart-button").addEventListener("click", resetGame);
   document.querySelector("#new-button").addEventListener("click", resetGame);
   undoButton.addEventListener("click", undoMove);
+  difficultySelect.addEventListener("change", () => {
+    if (mode !== "ai") return;
+    const selectedLabel = difficultySelect.selectedOptions[0].textContent;
+    resetGame();
+    hint.textContent = `${selectedLabel} 난이도로 새 게임을 시작했어.`;
+  });
 })();
