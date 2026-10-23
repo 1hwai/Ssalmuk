@@ -25,15 +25,37 @@
       <div class="mode-list">
         <button class="mode-card" data-mode="ai">
           <span class="mode-icon ai-icon" aria-hidden="true">✳</span>
-          <span class="mode-text"><strong>1인 모드</strong><small>AI와 대전</small></span>
+          <span class="mode-text"><strong>1인 모드</strong><small>AI 대전</small></span>
           <span class="mode-arrow" aria-hidden="true">↗</span>
         </button>
         <button class="mode-card" data-mode="local">
           <span class="mode-icon local-icon" aria-hidden="true">◉</span>
-          <span class="mode-text"><strong>2인 모드</strong><small>한 기기에서 번갈아 두기</small></span>
+          <span class="mode-text"><strong>2인 모드</strong><small>로컬 대전</small></span>
           <span class="mode-arrow" aria-hidden="true">↗</span>
         </button>
       </div>
+
+      <dialog id="color-dialog" class="setup-dialog">
+        <form method="dialog" class="setup-form">
+          <p class="eyebrow">GAME SETUP</p>
+          <h2>선공 설정</h2>
+          <p class="setup-description">사용할 돌 색상을 선택하십시오.</p>
+          <label class="color-option">
+            <input type="radio" name="player-color" value="1" checked>
+            <span class="option-stone black-stone" aria-hidden="true"></span>
+            <span><strong>사용자 흑 · AI 백</strong><small>사용자 선공</small></span>
+          </label>
+          <label class="color-option">
+            <input type="radio" name="player-color" value="2">
+            <span class="option-stone white-stone" aria-hidden="true"></span>
+            <span><strong>AI 흑 · 사용자 백</strong><small>AI 선공</small></span>
+          </label>
+          <div class="setup-actions">
+            <button id="cancel-setup-button" class="secondary-button" type="button">취소</button>
+            <button id="start-ai-button" class="primary-button" type="button">대국 시작</button>
+          </div>
+        </form>
+      </dialog>
       <p class="tiny-note">15 × 15 오목판 · 무료 · 회원가입 없음</p>
     </section>
 
