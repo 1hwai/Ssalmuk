@@ -174,7 +174,11 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
   .hero-boards { right: 0; top: 0; width: 48%; transform: none; opacity: .12; gap: 8px; }
   .hero-boards::before { top: -80px; right: -16px; height: 150px; }
 }
+/* A single faint motif belongs to this Gomoku landing page. */
+.hero-boards:has(.hero-board:only-child) { width: 27%; }
+.hero-board:only-child { flex-basis: 100%; }
 @media (max-width: 420px) {
-  .hero-boards { width: 39%; opacity: .1; gap: 5px; }
+  .hero-boards { width: 28%; opacity: .1; gap: 5px; }
+  .hero-boards:has(.hero-board:only-child) { width: 26%; }
   .hero-board .stone { width: 14%; }
 }
