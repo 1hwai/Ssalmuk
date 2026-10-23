@@ -15,7 +15,6 @@
   const moveCount = document.querySelector("#move-count");
   const hint = document.querySelector("#game-hint");
   const undoButton = document.querySelector("#undo-button");
-  const difficultyControl = document.querySelector("#difficulty-control");
   const difficultySelect = document.querySelector("#difficulty-select");
   const colorDialog = document.querySelector("#color-dialog");
   const startAiButton = document.querySelector("#start-ai-button");
@@ -38,7 +37,6 @@
   function startGame(nextMode, selectedHumanColor = BLACK) {
     clearTimeout(aiTimer);
     mode = nextMode;
-    difficultyControl.hidden = mode !== "ai";
     difficulty = difficultySelect.value;
     humanColor = selectedHumanColor;
     aiColor = humanColor === BLACK ? WHITE : BLACK;
@@ -67,7 +65,7 @@
   }
 
   function resetGame() {
-    startGame(mode);
+    startGame(mode, humanColor);
   }
 
   function render() {
@@ -297,10 +295,4 @@
   document.querySelector("#restart-button").addEventListener("click", resetGame);
   document.querySelector("#new-button").addEventListener("click", resetGame);
   undoButton.addEventListener("click", undoMove);
-  difficultySelect.addEventListener("change", () => {
-    if (mode !== "ai") return;
-    const selectedLabel = difficultySelect.selectedOptions[0].textContent;
-    resetGame();
-    hint.textContent = `${selectedLabel} 난이도 적용.`;
-  });
 })();
