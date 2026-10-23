@@ -118,6 +118,9 @@
   }
 
   function ensureNeuralEngine() {
+    if (location.protocol === "file:") {
+      return Promise.reject(new Error("The neural iframe requires http://localhost, not file://."));
+    }
     if (engineLoadPromise) return engineLoadPromise;
     if (!engineFrame.getAttribute("src")) engineFrame.src = "./engine.html";
     engineLoadPromise = new Promise((resolve, reject) => {
@@ -271,43 +274,8 @@
 
   function render() {
     if (!state) return;
-    boardElement.style.setProperty("--n", state.size);
     boardElement.setAttribute("aria-label", state.size + " 곱하기 " + state.size + " 바둑판");
-    boardElement.replaceChildren();
-    const stars = new Set();
-    const points = STAR_POINTS[state.size];
-    for (const y of points) for (const x of points) {
-      if (state.size === 9 && !((x === 4 && y === 4) || ((x === 2 || x === 6) && (y === 2 || y === 6)))) continue;
-      stars.add(y * state.size + x);
-    }
-    for (let i = 0; i < state.board.length; i++) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "intersection";
-      button.setAttribute("role", "gridcell");
-      button.setAttribute("aria-label", pointLabel(i));
-      button.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn() || state.board[i] !== EMPTY;
-      if (stars.has(i)) {
-        const star = document.createElement("span");
-        star.className = "star";
-        star.setAttribute("aria-hidden", "true");
-        button.append(star);
-      }
-      if (state.board[i] !== EMPTY) {
-        const stone = document.createElement("span");
-        stone.className = "stone " + (state.board[i] === BLACK ? "black" : "white");
-        stone.setAttribute("aria-hidden", "true");
-        button.append(stone);
-      }
-      if (state.lastMove === i && state.board[i] !== EMPTY) {
-        const last = document.createElement("span");
-        last.className = "last-move";
-        last.setAttribute("aria-hidden", "true");
-        button.append(last);
-      }
-      button.addEventListener("click", () => tryPlay(i));
-      boardElement.append(button);
-    }
+    drawBoard();
 
     turnStone.className = "turn-stone " + (state.turn === BLACK ? "black" : "white");
     statusTitle.textContent = state.finished ? "대국 종료" : (state.turn === BLACK ? "흑 차례" : "백 차례");
@@ -321,6 +289,41 @@
     undoButton.disabled = state.past.length === 0 || state.aiThinking || state.engineLoading || (state.mode === "ai" && !state.neuralHistory.some(action => !action.pass && action.color === state.humanColor));
     passButton.disabled = state.finished || state.aiThinking || state.engineLoading || state.engineError || isAiTurn();
     if (!state.finished) resultPanel.hidden = true;
+  }
+
+  function drawBoard() {
+    if(!state)return;
+    const rect=boardElement.getBoundingClientRect();if(!rect.width)return;
+    const dpr=window.devicePixelRatio||1,px=Math.round(rect.width*dpr);
+    if(boardElement.width!==px||boardElement.height!==px){boardElement.width=px;boardElement.height=px;}
+    const ctx=boardElement.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=rect.width,n=state.size,cell=w/n,edge=cell/2;
+    ctx.clearRect(0,0,w,w);ctx.fillStyle="#d9b575";ctx.fillRect(0,0,w,w);
+    ctx.strokeStyle="#594327";ctx.lineWidth=Math.max(.65,w/850);ctx.beginPath();
+    for(let i=0;i<n;i++){const p=edge+i*cell;ctx.moveTo(edge,p);ctx.lineTo(w-edge,p);ctx.moveTo(p,edge);ctx.lineTo(p,w-edge);}ctx.stroke();
+    ctx.fillStyle="#594327";
+    for(const y of STAR_POINTS[n])for(const x of STAR_POINTS[n]){
+      if(n===9&&!((x===4&&y===4)||((x===2||x===6)&&(y===2||y===6))))continue;
+      ctx.beginPath();ctx.arc(edge+x*cell,edge+y*cell,Math.max(1.4,cell*.075),0,Math.PI*2);ctx.fill();
+    }
+    for(let i=0;i<state.board.length;i++){
+      const color=state.board[i];if(color===EMPTY)continue;
+      const x=i%n,y=Math.floor(i/n),cx=edge+x*cell,cy=edge+y*cell,r=cell*.44;
+      const g=ctx.createRadialGradient(cx-r*.32,cy-r*.36,r*.04,cx,cy,r);
+      if(color===BLACK){g.addColorStop(0,"#646464");g.addColorStop(.36,"#252525");g.addColorStop(1,"#030303");}
+      else{g.addColorStop(0,"#fff");g.addColorStop(.6,"#faf9f3");g.addColorStop(1,"#d5d0c5");}
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+      if(color===WHITE){ctx.strokeStyle="#9b9589";ctx.lineWidth=.7;ctx.stroke();}
+    }
+    if(state.lastMove>=0&&state.board[state.lastMove]!==EMPTY){
+      const x=state.lastMove%n,y=Math.floor(state.lastMove/n);
+      ctx.strokeStyle="#c44c36";ctx.lineWidth=Math.max(1.3,cell*.055);ctx.beginPath();ctx.arc(edge+x*cell,edge+y*cell,cell*.19,0,Math.PI*2);ctx.stroke();
+    }
+  }
+  function boardPointFromEvent(event) {
+    const rect=boardElement.getBoundingClientRect(),cell=rect.width/state.size;
+    const x=Math.round((event.clientX-rect.left)/cell-.5),y=Math.round((event.clientY-rect.top)/cell-.5);
+    return x<0||x>=state.size||y<0||y>=state.size?-1:y*state.size+x;
   }
 
   function pointLabel(index) {
@@ -480,6 +483,13 @@
       if (!aiMode) document.querySelector('input[name="player-color"][value="1"]').checked = true;
     });
   });
+  boardElement.addEventListener("pointerdown", event => {
+    if (!state || event.button !== 0) return;
+    const index = boardPointFromEvent(event);
+    if (index >= 0) tryPlay(index);
+  });
+  window.addEventListener("resize", () => { if (state && !gameScreen.hidden) drawBoard(); });
+
   $("start-button").addEventListener("click", startGame);
   $("menu-button").addEventListener("click", () => {
     if (aiTimer) clearTimeout(aiTimer);
