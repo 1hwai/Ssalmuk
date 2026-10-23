@@ -121,7 +121,7 @@
       finished = true;
       render();
       statusTitle.textContent = "무승부";
-      statusDetail.textContent = "판이 꽉 찼어. 한 판 더 할까?";
+      statusDetail.textContent = "무승부. 새 게임으로 재대국할 수 있습니다.";
       return;
     }
     turn = turn === BLACK ? WHITE : BLACK;
@@ -273,8 +273,12 @@
     }
     finished = false;
     thinking = false;
-    render();
-    hint.textContent = "한 수 되돌렸어.";
+    hint.textContent = "착수 취소.";
+    if (mode === "ai" && aiColor === BLACK) {
+      scheduleAiMove();
+    } else {
+      render();
+    }
   }
 
   document.querySelectorAll("[data-mode]").forEach(button => {
