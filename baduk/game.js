@@ -33,8 +33,8 @@
   function freshState(size, mode, humanColor, difficulty, rules) {
     const board = Array(size * size).fill(EMPTY);
     return {
-      size, mode, humanColor, difficulty, board, turn: BLACK,
-      consecutivePasses: 0, moveCount: 0, lastMove: -1,
+      size, mode, humanColor, difficulty, rules, board, turn: BLACK,
+      captures: { black: 0, white: 0 }, consecutivePasses: 0, moveCount: 0, lastMove: -1,
       finished: false, aiThinking: false, engineLoading: false, engineError: false,
       seen: new Set([boardKey(board)]), neuralHistory: [], past: []
     };
@@ -101,8 +101,8 @@
   function snapshot() {
     return {
       size: state.size, mode: state.mode, humanColor: state.humanColor,
-      difficulty: state.difficulty, board: state.board.slice(), turn: state.turn,
-      consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
+      difficulty: state.difficulty, rules: state.rules, board: state.board.slice(), turn: state.turn,
+      captures: { ...state.captures }, consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
       lastMove: state.lastMove, finished: state.finished,
       aiThinking: false, engineLoading: false, engineError: false,
       seen: new Set(state.seen), neuralHistory: state.neuralHistory.slice()
@@ -203,6 +203,7 @@
     saveUndoPoint();
     state.neuralHistory.push({ x: index % state.size, y: Math.floor(index / state.size), color });
     state.board = move.board;
+    state.captures[color === BLACK ? "black" : "white"] += move.captured.length;
     state.turn = -color;
     state.consecutivePasses = 0;
     state.moveCount += 1;
@@ -241,7 +242,8 @@
     const size = Number(document.querySelector('input[name="board-size"]:checked').value);
     const humanColor = Number(document.querySelector('input[name="player-color"]:checked').value);
     const difficulty = $("ai-difficulty").value;
-    state = freshState(size, mode, humanColor, difficulty);
+    const rules = $("scoring-rules").value;
+    state = freshState(size, mode, humanColor, difficulty, rules);
     setupScreen.hidden = true;
     gameScreen.hidden = false;
     resultPanel.hidden = true;
