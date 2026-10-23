@@ -20,7 +20,7 @@
   const EMPTY = 0;
   const BLACK = 1;
   const WHITE = -1;
-  const KOMI = 6.5;
+  const KOMI = { korean: 6.5, japanese: 6.5, chinese: 7.5 };
   const STAR_POINTS = {
     9: [2, 4, 6],
     13: [3, 6, 9],
@@ -30,7 +30,7 @@
   let state = null;
   let aiTimer = null;
 
-  function freshState(size, mode, humanColor, difficulty) {
+  function freshState(size, mode, humanColor, difficulty, rules) {
     const board = Array(size * size).fill(EMPTY);
     return {
       size, mode, humanColor, difficulty, board, turn: BLACK,
@@ -398,11 +398,20 @@
   function scoreBoard() {
     const board = state.board;
     const size = state.size;
-    let black = 0, white = KOMI;
-    for (const stone of board) {
-      if (stone === BLACK) black++;
-      else if (stone === WHITE) white++;
+    const rules = state.rules || "korean";
+    const komi = KOMI[rules];
+    const areaScoring = rules === "chinese";
+    let black = 0, white = komi;
+    if (areaScoring) {
+      for (const stone of board) {
+        if (stone === BLACK) black++;
+        else if (stone === WHITE) white++;
+      }
+    } else {
+      black += state.captures.black;
+      white += state.captures.white;
     }
+
     const visited = new Set();
     for (let i = 0; i < board.length; i++) {
       if (board[i] !== EMPTY || visited.has(i)) continue;
@@ -427,17 +436,19 @@
         else white += region.length;
       }
     }
-    return { black, white };
+    return { black, white, komi, rules, areaScoring };
   }
 
   function showScore() {
     const score = scoreBoard();
     const winner = score.black > score.white ? "흑 승리" : score.white > score.black ? "백 승리" : "무승부";
+    const ruleNames = { korean: "한국식", japanese: "일본식", chinese: "중국식" };
     resultPanel.replaceChildren();
     const title = document.createElement("strong");
-    title.textContent = winner + " · 흑 " + score.black + "집 / 백 " + score.white + "집";
+    title.textContent = ruleNames[score.rules] + " · " + winner + " · 흑 " + score.black + "집 / 백 " + score.white + "집";
     const detail = document.createElement("p");
-    detail.textContent = "백 덤 " + KOMI + "집 포함. 단순 집 계산 결과이며, 사활 및 사석은 별도로 판정하지 않았습니다.";
+    const scoringName = score.areaScoring ? "집과 살아 있는 돌을 합산하는 방식" : "집과 포획한 돌을 합산하는 방식";
+    detail.textContent = scoringName + ". 백 덤 " + score.komi + "집 포함. 간이 계가이므로 사활·사석 및 빅(세키)은 자동 판정하지 않습니다.";
     resultPanel.append(title, detail);
     resultPanel.hidden = false;
     gameHint.textContent = "대국이 종료되었습니다. 새 대국을 시작할 수 있습니다.";
