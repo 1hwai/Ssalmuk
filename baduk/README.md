@@ -28,3 +28,7 @@ AI는 [Game of Go](https://github.com/maksimKorzh/go)의 브라우저용 KataNet
 - [Original KataNet browser project and playable demo](https://github.com/maksimKorzh/kata-model-js)
 
 엔진 코드는 별도 `engine.html` 브리지에서 불러오며, 오목 게임의 AI 구현과는 분리되어 있다.
+
+## 라이선스와 상업 배포
+
+라이선스 조사 결과와 배포 전 확인 사항은 [`LICENSE.md`](LICENSE.md)에 기록한다. g170 계열 신경망 가중치는 KataGo 공식 페이지에서 CC0 1.0으로 안내하지만, 원본 브라우저 앱의 `goban.js`와 `gui.js`는 명시적인 재사용 라이선스를 확인하지 못했다. 따라서 **모델 라이선스만으로 현재 AI 구현 전체가 상업 배포 가능한 것은 아니다.** 해당 코드의 허가를 확인하거나 상업적 사용이 허용된 코드로 교체하기 전까지는 상업 배포를 승인된 상태로 취급하지 않는다.
