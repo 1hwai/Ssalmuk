@@ -424,6 +424,9 @@
     const rules = $("scoring-rules").value;
     const characterId = mode === "ai" ? $("ai-character").value : null;
     state = freshState(size, mode, humanColor, difficulty, rules, characterId);
+    if (mode === "ai" && CHARACTERS[characterId]) {
+      state.dialogueLine = pickDialogue(CHARACTERS[characterId], "start");
+    }
     setupScreen.hidden = true;
     gameScreen.hidden = false;
     resultPanel.hidden = true;
@@ -459,6 +462,12 @@
     }
   }
 
+  function pickDialogue(character, category) {
+    const lines = character.dialogues[category] || [];
+    if (!lines.length) return "";
+    return lines[Math.floor(Math.random() * lines.length)];
+  }
+
   function renderOpponentProfile() {
     const profile = $("opponent-profile");
     if (!state || state.mode !== "ai" || !state.characterId) {
@@ -474,7 +483,7 @@
     $("opponent-name").textContent = character.name;
     $("opponent-description").textContent = (character.color === BLACK ? "흑돌" : "백돌") + " · " + character.gender;
     $("opponent-emotion").textContent = character.emotion;
-    $("opponent-line").textContent = character.line;
+    $("opponent-line").textContent = state.dialogueLine || pickDialogue(character, "start");
   }
 
   function updateCharacterOptions() {
