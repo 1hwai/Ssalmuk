@@ -39,7 +39,7 @@
         <form method="dialog" class="setup-form">
           <p class="eyebrow">GAME SETUP</p>
           <h2>선공 설정</h2>
-          <p class="setup-description">사용할 돌 색상을 선택하십시오.</p>
+          <p class="setup-description">돌 색상과 AI 난이도를 선택하십시오.</p>
           <label class="color-option">
             <input type="radio" name="player-color" value="1" checked>
             <span class="option-stone black-stone" aria-hidden="true"></span>
@@ -49,6 +49,14 @@
             <input type="radio" name="player-color" value="2">
             <span class="option-stone white-stone" aria-hidden="true"></span>
             <span><strong>AI 흑 · 사용자 백</strong><small>AI 선공</small></span>
+          </label>
+          <label class="setup-difficulty" for="difficulty-select">AI 난이도
+            <select id="difficulty-select">
+              <option value="beginner">초급</option>
+              <option value="intermediate" selected>중급</option>
+              <option value="advanced">고급</option>
+              <option value="expert">특급</option>
+            </select>
           </label>
           <div class="setup-actions">
             <button id="cancel-setup-button" class="secondary-button" type="button">취소</button>
@@ -69,7 +77,6 @@
       <div class="status-card" aria-live="polite">
         <span id="turn-stone" class="turn-stone black-stone" aria-hidden="true"></span>
         <div class="status-copy"><strong id="status-title">흑 차례</strong><span id="status-detail">원하는 곳을 눌러 착수하십시오</span></div>
-        <label id="difficulty-control" class="difficulty-control" for="difficulty-select">난이도<select id="difficulty-select"><option value="beginner">초급</option><option value="intermediate" selected>중급</option><option value="advanced">고급</option><option value="expert">특급</option></select></label>
         <span id="move-count" class="move-count">0수</span>
       </div>
 
