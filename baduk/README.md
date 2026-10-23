@@ -15,7 +15,7 @@ AI는 [Game of Go](https://github.com/maksimKorzh/go)의 브라우저용 KataNet
 
 ## 실행
 
-`index.html`을 브라우저에서 연다. AI 대전에서는 **돌 색상 → 난이도** 순서로 설정한 뒤 대국실에 입장한다. 2인 대전에서는 AI 설정을 숨긴다.
+저장소 루트에서 `python3 -m http.server 8000`을 실행한 뒤 `http://localhost:8000/baduk/`으로 접속한다. `file://`로 직접 열면 브라우저가 iframe의 출처를 격리하므로 신경망 AI를 사용할 수 없다. AI 대전에서는 **돌 색상 → 난이도** 순서로 설정한 뒤 대국실에 입장한다. 2인 대전에서는 AI 설정을 숨긴다.
 
 ## 규칙 및 계가 범위
 
