@@ -102,7 +102,7 @@
       board: state.board.slice(), turn: state.turn,
       consecutivePasses: state.consecutivePasses, moveCount: state.moveCount,
       lastMove: state.lastMove, finished: state.finished,
-      aiThinking: false, seen: new Set(state.seen), past: state.past.slice()
+      aiThinking: false, seen: new Set(state.seen)
     };
   }
 
@@ -395,7 +395,7 @@
       ...previous,
       board: previous.board.slice(),
       seen: new Set(previous.seen),
-      past: previous.past.slice(),
+      past: state.past.slice(),
       aiThinking: false
     };
     resultPanel.hidden = true;
