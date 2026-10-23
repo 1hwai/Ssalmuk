@@ -180,7 +180,7 @@
     const stars = new Set();
     const points = STAR_POINTS[state.size];
     for (const y of points) for (const x of points) {
-      if (state.size === 9 && !(x === 4 || y === 4)) continue;
+      if (state.size === 9 && !((x === 4 && y === 4) || ((x === 2 || x === 6) && (y === 2 || y === 6)))) continue;
       stars.add(y * state.size + x);
     }
     for (let i = 0; i < state.board.length; i++) {
