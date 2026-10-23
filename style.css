@@ -130,31 +130,29 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
 .board { display:block; width:100%; height:auto; aspect-ratio:1; }
 
 
-/* Faint ink-wash motifs: five-by-five intersections, no wooden board fill. */
+/* Ink-wash Gomoku motif: open-ended intersections that dissolve from the top-right. */
 .intro { position: relative; isolation: isolate; }
 .intro > h1 { position: relative; z-index: 1; max-width: 58%; }
 .hero-boards {
-  position: absolute; z-index: 0; right: 0; top: 50%;
-  width: 42%; display: flex; justify-content: flex-end; align-items: center;
-  gap: 16px; transform: translateY(-42%); pointer-events: none; opacity: .2;
+  position: absolute; z-index: 0; right: -2%; top: 8px;
+  width: 27%; aspect-ratio: 1; pointer-events: none; opacity: .2;
 }
 .hero-boards::before {
-  content: ""; position: absolute; z-index: -1; top: -115px; right: -24px;
-  width: 78%; height: 210px; transform: rotate(-12deg);
+  content: ""; position: absolute; z-index: -1; inset: -48% -35% -28% -22%;
   background:
-    radial-gradient(ellipse at 72% 10%, rgba(43,55,43,.18), transparent 58%),
-    linear-gradient(108deg, transparent 30%, rgba(43,55,43,.13) 48%, rgba(43,55,43,.04) 56%, transparent 72%);
-  filter: blur(8px); border-radius: 48% 0 55% 35%;
+    radial-gradient(ellipse at 78% 18%, rgba(43,55,43,.22), transparent 58%),
+    linear-gradient(135deg, transparent 20%, rgba(43,55,43,.12) 55%, transparent 78%);
+  filter: blur(9px); border-radius: 48% 0 55% 35%;
 }
 .hero-board {
-  position: relative; flex: 0 1 46%; aspect-ratio: 1; overflow: visible;
+  position: absolute; inset: 0; overflow: visible;
   background-image:
     linear-gradient(to right, rgba(47,57,47,.8) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(47,57,47,.8) 1px, transparent 1px);
   background-size: 25% 100%, 100% 25%;
   background-position: left top; background-repeat: repeat-x, repeat-y;
-  border-right: 1px solid rgba(47,57,47,.8);
-  border-bottom: 1px solid rgba(47,57,47,.8);
+  -webkit-mask-image: radial-gradient(ellipse at 100% 0%, #000 0%, rgba(0,0,0,.82) 34%, rgba(0,0,0,.3) 61%, transparent 82%);
+  mask-image: radial-gradient(ellipse at 100% 0%, #000 0%, rgba(0,0,0,.82) 34%, rgba(0,0,0,.3) 61%, transparent 82%);
 }
 .hero-board .stone {
   position: absolute; left: var(--x); top: var(--y);
@@ -169,16 +167,14 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
   background: radial-gradient(circle at 32% 25%, #fff 0, #fff 48%, #d5d3c8 100%);
   border: 1px solid #aaa99f; box-shadow: 1px 2px 3px #0002;
 }
+/* Keep navigation cards above the decorative grid. */
+.home-screen .mode-list { position: relative; z-index: 1; }
 @media (max-width: 620px) {
   .intro > h1 { max-width: 100%; }
-  .hero-boards { right: 0; top: 0; width: 48%; transform: none; opacity: .12; gap: 8px; }
-  .hero-boards::before { top: -80px; right: -16px; height: 150px; }
+  .hero-boards { width: 31%; right: 0; top: 0; opacity: .12; }
+  .hero-boards::before { inset: -35% -24% -20%; }
 }
-/* A single faint motif belongs to this Gomoku landing page. */
-.hero-boards:has(.hero-board:only-child) { width: 27%; }
-.hero-board:only-child { flex-basis: 100%; }
 @media (max-width: 420px) {
-  .hero-boards { width: 28%; opacity: .1; gap: 5px; }
-  .hero-boards:has(.hero-board:only-child) { width: 26%; }
+  .hero-boards { width: 27%; opacity: .1; }
   .hero-board .stone { width: 14%; }
 }
