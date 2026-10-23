@@ -119,3 +119,9 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 58px); line-height: 1.22; letter-spa
 /* Difficulty is selected before entering the Gomoku board. */
 .setup-difficulty { display: grid; gap: 8px; margin-top: 18px; color: var(--muted); font-size: 12px; }
 .setup-difficulty select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); border-radius: 10px; background: #fffef9; color: var(--ink); font: inherit; cursor: pointer; }
+
+/* Canvas board uses a single fixed coordinate system for all intersections. */
+.board { display:block; width:100%; height:auto; aspect-ratio:1; }
+
+/* Canvas board uses a single fixed coordinate system for all intersections. */
+.board { display:block; width:100%; height:auto; aspect-ratio:1; }
