@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ssalmuk 바둑 AI 엔진</title>
+  <title>돌담 바둑 AI 엔진</title>
 </head>
 <body>
-  <p id="engine-status" role="status">AI 런타임을 준비하고 있습니다.</p>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <p id="engine-status" role="status">돌담 자체 AI 엔진을 준비하고 있습니다.</p>
   <script src="./engine.js"></script>
   <script>
     "use strict";
     const status = document.getElementById("engine-status");
-    window.kataLoad().then(() => {
-      status.textContent = "AI 모델 준비 완료";
+    window.ssalmukLoad().then(() => {
+      status.textContent = "AI 엔진 준비 완료";
     }).catch(error => {
-      status.textContent = "AI 모델을 불러오지 못했습니다.";
+      status.textContent = "AI 엔진을 준비하지 못했습니다.";
       console.error("Ssalmuk AI initialization failed:", error);
     });
   </script>
