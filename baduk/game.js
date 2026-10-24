@@ -236,10 +236,27 @@
       }
       return lines.slice(0, target);
     };
-    original.unfavorable = makePool(original.unfavorable, 30, voice.open, voice.close)
-      .map((line, i) => i < original.unfavorable.length ? line : line);
+    const unfavorableOpen = [
+      "형세가 기울었어도", "상대가 앞서고 있지만", "지금은 불리해도",
+      "주도권을 내줬지만", "계산이 꼬였어도", "쉽지 않은 판이지만"
+    ];
+    const unfavorableClose = [
+      "아직 포기할 단계는 아니야.", "역전할 수를 찾아야겠어.",
+      "침착하게 수습해 보자.", "끝까지 읽어 봐야 해.", "여기서 무너지진 않겠어."
+    ];
+    const favorableOpen = [
+      "형세가 내 쪽으로 기울었으니", "주도권을 잡은 지금은",
+      "좋은 흐름을 이어 가려면", "상대의 빈틈이 보이니",
+      "계산이 맞아떨어진다면", "지금 우세를 지키려면"
+    ];
+    const favorableClose = [
+      "서두르지 말고 마무리하자.", "끝까지 침착하게 두면 돼.",
+      "이 흐름을 놓치지 않겠어.", "쓸데없는 모험은 필요 없어.",
+      "다음 수까지 계획해 두자."
+    ];
+    original.unfavorable = makePool(original.unfavorable, 30, unfavorableOpen, unfavorableClose);
     original.normal = makePool(original.normal, 140, voice.open, voice.close);
-    original.favorable = makePool(original.favorable, 30, voice.open, voice.close);
+    original.favorable = makePool(original.favorable, 30, favorableOpen, favorableClose);
   }
   Object.values(CHARACTERS).forEach(expandCharacterDialogues);
 
