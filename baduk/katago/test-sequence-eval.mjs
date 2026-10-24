@@ -43,9 +43,20 @@ try {
         values[2] < -20 || values[2] > 20) {
       throw new Error("KataGo win/loss outputs are outside a plausible logit range.");
     }
+    const maxLogit = Math.max(values[0], values[1], values[2]);
+    const weights = values.slice(0, 3).map(value => Math.exp(value - maxLogit));
+    const total = weights.reduce((sum, value) => sum + value, 0);
+    const blackWinRate = (weights[1] + weights[2] * 0.5) / total;
+    const whiteWinRate = (weights[0] + weights[2] * 0.5) / total;
+    if (![blackWinRate, whiteWinRate].every(Number.isFinite) ||
+        Math.abs(blackWinRate + whiteWinRate - 1) > 1e-6 ||
+        blackWinRate < 0 || blackWinRate > 1 || whiteWinRate < 0 || whiteWinRate > 1) {
+      throw new Error("KataGo win-rate conversion failed.");
+    }
     console.log("PASS: KataGo WASM loaded model v" +
       module.ccall("kgeModelVersion", "number", [], []) +
-      ", replayed one move, and returned finite win-rate/score values.");
+      ", replayed one move, and returned Black " + (blackWinRate * 100).toFixed(1) +
+      "% / White " + (whiteWinRate * 100).toFixed(1) + "% with finite score values.");
   } finally {
     module._free(movesPtr);
     module._free(colorsPtr);
