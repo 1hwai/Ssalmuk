@@ -19,7 +19,7 @@
         }
         resolve(window.createKata);
       };
-      script.onerror = () => reject(new Error("KataGo WASM files are missing. Build and deploy baduk/katago first."));
+      script.onerror = () => reject(new Error("KataGo WASM loader failed to load."));
       document.head.append(script);
     }).catch(error => {
       scriptPromise = null;
@@ -49,30 +49,63 @@
     return promise;
   }
 
-  async function evaluate(board, size, rules) {
+  function softmaxWinRates(logits) {
+    const max = Math.max(logits[0], logits[1], logits[2]);
+    const probs = logits.slice(0, 3).map(value => Math.exp(value - max));
+    const total = probs.reduce((sum, value) => sum + value, 0);
+    if (!Number.isFinite(total) || total <= 0) throw new Error("KataGo returned invalid win/loss logits.");
+    // The value head is {white win, white loss, no result}; split no-result evenly.
+    const white = (probs[0] + probs[2] * 0.5) / total;
+    const black = (probs[1] + probs[2] * 0.5) / total;
+    return { black, white };
+  }
+
+  async function evaluate(board, size, rules, history, toMove) {
     if (!Array.isArray(board) || board.length !== size * size) {
       throw new Error("Invalid board supplied to KataGo evaluator.");
     }
+    if (!Array.isArray(history)) throw new Error("Invalid move history supplied to KataGo evaluator.");
     const module = await getEngine(size);
     const hw = size * size;
-    const stonesPtr = module._malloc(hw * 4);
+    const moves = history.map(action => action.pass ? -1 : action.y * size + action.x);
+    const colors = history.map(action => action.color === 1 ? 1 : 2);
+    const movesPtr = module._malloc(Math.max(1, moves.length) * 4);
+    const colorsPtr = module._malloc(Math.max(1, colors.length) * 4);
+    const boardPtr = module._malloc(hw * 4);
     const policyPtr = module._malloc((hw + 1) * 4);
     const valuePtr = module._malloc(5 * 4);
     const ownerPtr = module._malloc(hw * 4);
     try {
-      const stones = new Int32Array(hw);
-      for (let i = 0; i < hw; i++) stones[i] = board[i] === 1 ? 1 : board[i] === -1 ? 2 : 0;
-      module.HEAP32.set(stones, stonesPtr >> 2);
-      const ok = await module.ccall("kgeEval", "number",
-        ["number", "number", "number", "number", "number", "number"],
-        [stonesPtr, 1, KOMI[rules] ?? 6.5, policyPtr, valuePtr, ownerPtr], { async: true });
-      if (!ok) throw new Error("KataGo evaluation failed: " + module.ccall("kgeError", "string", [], []));
+      if (moves.length) {
+        module.HEAP32.set(Int32Array.from(moves), movesPtr >> 2);
+        module.HEAP32.set(Int32Array.from(colors), colorsPtr >> 2);
+      }
+      const pla = toMove === 1 ? 1 : 2;
+      const ok = await module.ccall("kgeEvalSeq", "number",
+        ["number", "number", "number", "number", "number", "number", "number", "number", "number"],
+        [movesPtr, colorsPtr, moves.length, pla, KOMI[rules] ?? 6.5, boardPtr, policyPtr, valuePtr, ownerPtr],
+        { async: true });
+      if (!ok) throw new Error("KataGo evaluation failed: " + module.ccall("kgeError", "string", [], ""));
       const values = module.HEAPF32.slice(valuePtr >> 2, (valuePtr >> 2) + 5);
+      const rates = softmaxWinRates(Array.from(values.slice(0, 3)));
       const ownership = module.HEAPF32.slice(ownerPtr >> 2, (ownerPtr >> 2) + hw);
-      // kgeEval value outputs 3 and 4 are whiteScoreMean and whiteLead.
-      return { whiteScore: values[3], whiteLead: values[4], ownership, modelVersion: module.ccall("kgeModelVersion", "number", [], []) };
+      // valueOut[4] is whiteLead (already accounts for komi); the app displays Black minus White.
+      const whiteLead = values[4];
+      if (!Number.isFinite(whiteLead) || !Number.isFinite(rates.black) || !Number.isFinite(rates.white)) {
+        throw new Error("KataGo returned non-finite position values.");
+      }
+      return {
+        blackLead: -whiteLead,
+        whiteLead,
+        blackWinRate: rates.black,
+        whiteWinRate: rates.white,
+        ownership,
+        modelVersion: module.ccall("kgeModelVersion", "number", [], [])
+      };
     } finally {
-      module._free(stonesPtr);
+      module._free(movesPtr);
+      module._free(colorsPtr);
+      module._free(boardPtr);
       module._free(policyPtr);
       module._free(valuePtr);
       module._free(ownerPtr);
