@@ -33,7 +33,7 @@ jobs:
       - name: Install Emscripten
         uses: emscripten-core/setup-emsdk@v15
         with:
-          version: 6.0.14
+          version: latest
           actions-cache-folder: emsdk-cache
 
       - name: Install build dependencies
