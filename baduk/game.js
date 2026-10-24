@@ -524,6 +524,11 @@
     const size = state.size;
     const rules = state.rules;
     const toMove = state.turn;
+    const evalStatusBefore = $("opponent-evaluation");
+    if (evalStatusBefore) {
+      evalStatusBefore.textContent = "KataGo 분석 중 · 현재 착수의 승률과 예상 형세를 계산하고 있습니다.";
+      evalStatusBefore.dataset.status = "loading";
+    }
     try {
       const result = await window.SsalmukKataGo.evaluate(boardSnapshot, size, rules, historySnapshot, toMove);
       if (requestId !== kataEvaluationRequest || state !== requestedState ||
