@@ -584,17 +584,19 @@
       const blackLeadText = (result.blackLead >= 0 ? "+" : "") + result.blackLead.toFixed(1) + "집";
       const blackWinText = (result.blackWinRate * 100).toFixed(1) + "%";
       const whiteWinText = (result.whiteWinRate * 100).toFixed(1) + "%";
+      const networkBlackWinText = (result.networkBlackWinRate * 100).toFixed(1) + "%";
       const bandText = category === "unfavorable" ? "캐릭터 불리" :
         category === "favorable" ? "캐릭터 유리" : category === "result" ? "대국 종료" : "무난";
       const evalStatus = $("opponent-evaluation");
       if (evalStatus) {
-        evalStatus.textContent = "KataGo · 흑 승률 " + blackWinText +
-          " / 백 승률 " + whiteWinText + " · 예상 형세 흑 " + blackLeadText +
-          " · " + bandText + " · 모델 v" + result.modelVersion;
+        evalStatus.textContent = "KataGo MCTS · 흑 승률 " + blackWinText +
+          " (NN " + networkBlackWinText + ") / 백 승률 " + whiteWinText +
+          " · 예상 형세 흑 " + blackLeadText + " · " + bandText +
+          " · " + result.visits + "회 탐색 · 모델 v" + result.modelVersion;
         evalStatus.dataset.status = category;
       }
-      gameHint.textContent = "KataGo 형세 분석 · 흑 승률 " + blackWinText +
-        " · 흑 기준 예상 형세 " + blackLeadText;
+      gameHint.textContent = "KataGo MCTS 형세 분석 · 흑 승률 " + blackWinText +
+        " · 흑 기준 예상 형세 " + blackLeadText + " · " + result.visits + "회 탐색";
       render();
     } catch (error) {
       if (requestId === kataEvaluationRequest && state === requestedState) {
