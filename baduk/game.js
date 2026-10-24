@@ -359,30 +359,66 @@
   }
 
   function evaluatePosition(board = state.board) {
-    // Heuristic estimate for character reactions, not an official Go score.
+    // Character-facing estimate only; this does not control AI move selection.
+    // Combine captured stones, stones, surrounded empty regions, and weak-group risk.
     const size = state.size;
-    let black = state.captures.black;
-    let white = state.captures.white + KOMI[state.rules || "korean"];
+    const rules = state.rules || "korean";
+    const score = { [BLACK]: state.captures.black, [WHITE]: state.captures.white + KOMI[rules] };
+    const visited = new Uint8Array(board.length);
+    const neighbors = (i) => {
+      const x = i % size, y = Math.floor(i / size), out = [];
+      if (x > 0) out.push(i - 1);
+      if (x + 1 < size) out.push(i + 1);
+      if (y > 0) out.push(i - size);
+      if (y + 1 < size) out.push(i + size);
+      return out;
+    };
+    const groups = [];
     for (let i = 0; i < board.length; i++) {
-      if (board[i] === BLACK) black += 1;
-      else if (board[i] === WHITE) white += 1;
-      else {
-        const x = i % size, y = Math.floor(i / size);
-        let blackInfluence = 0, whiteInfluence = 0;
-        for (let j = 0; j < board.length; j++) {
-          const stone = board[j];
-          if (stone === EMPTY) continue;
-          const distance = Math.abs(x - j % size) + Math.abs(y - Math.floor(j / size));
-          if (distance > 4) continue;
-          const influence = 0.72 ** distance;
-          if (stone === BLACK) blackInfluence = Math.max(blackInfluence, influence);
-          else whiteInfluence = Math.max(whiteInfluence, influence);
+      const color = board[i];
+      if (color === EMPTY || visited[i]) continue;
+      const stack = [i], stones = [], liberties = new Set();
+      visited[i] = 1;
+      while (stack.length) {
+        const p = stack.pop();
+        stones.push(p);
+        for (const n of neighbors(p)) {
+          if (board[n] === EMPTY) liberties.add(n);
+          else if (board[n] === color && !visited[n]) {
+            visited[n] = 1;
+            stack.push(n);
+          }
         }
-        black += blackInfluence * 0.45;
-        white += whiteInfluence * 0.45;
       }
+      groups.push({ color, stones, liberties: liberties.size });
+      score[color] += stones.length;
     }
-    return black - white;
+    // Discount groups with few liberties so characters react to pressure, not only raw count.
+    for (const group of groups) {
+      const n = group.stones.length;
+      if (group.liberties === 1) score[group.color] -= Math.min(n * 0.9, 3.5);
+      else if (group.liberties === 2) score[group.color] -= Math.min(n * 0.3, 1.2);
+    }
+    // Estimate territory from empty regions bordered by only one color.
+    const emptySeen = new Uint8Array(board.length);
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] !== EMPTY || emptySeen[i]) continue;
+      const stack = [i], region = [];
+      const borders = new Set();
+      emptySeen[i] = 1;
+      while (stack.length) {
+        const p = stack.pop();
+        region.push(p);
+        for (const n of neighbors(p)) {
+          if (board[n] === EMPTY && !emptySeen[n]) {
+            emptySeen[n] = 1;
+            stack.push(n);
+          } else if (board[n] === BLACK || board[n] === WHITE) borders.add(board[n]);
+        }
+      }
+      if (borders.size === 1) score[[...borders][0]] += region.length;
+    }
+    return score[BLACK] - score[WHITE];
   }
 
   function updateCharacterReaction(previousEval, moverColor) {
