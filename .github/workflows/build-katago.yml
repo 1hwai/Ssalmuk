@@ -21,8 +21,6 @@ jobs:
     steps:
       - name: Checkout Ssalmuk
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout KataGo WebGPU evaluator
         uses: actions/checkout@v4
@@ -43,11 +41,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build zlib1g-dev libeigen3-dev
           emcc --version
+          test -f "$HOME/emsdk/emsdk_env.sh"
 
       - name: Build KataGo WASM evaluator
         working-directory: katago-upstream
         env:
-          EMSDK_DIR: ${{ env.EMSDK }}
           B18_NET: /tmp/katago-model.bin.gz
         run: |
           set -euxo pipefail
