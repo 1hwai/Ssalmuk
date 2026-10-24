@@ -2,7 +2,9 @@
   "use strict";
 
   const SCRIPT_URL = "./katago/kataeval.js";
-  const MODEL_URL = "./katago/model.bin.gz";
+  // Keep the 93 MiB model out of Cloudflare Pages' 25 MiB per-file limit.
+  // GitHub raw serves this repository asset with cross-origin access enabled.
+  const MODEL_URL = "https://raw.githubusercontent.com/1hwai/Ssalmuk/main/baduk/katago/model.bin.gz";
   const KOMI = { korean: 6.5, japanese: 6.5, chinese: 7.5 };
   const instances = new Map();
   let scriptPromise = null;
