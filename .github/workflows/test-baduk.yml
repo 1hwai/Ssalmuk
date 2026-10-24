@@ -1,0 +1,35 @@
+name: Test Baduk KataGo integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "baduk/game.js"
+      - "baduk/katago-evaluator.js"
+      - "baduk/katago/test-sequence-eval.mjs"
+      - "baduk/katago/kataeval.js"
+      - "baduk/katago/kataeval.wasm"
+      - "baduk/katago/model.bin.gz"
+      - ".github/workflows/test-baduk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Ssalmuk
+        uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: |
+          set -euxo pipefail
+          node --check baduk/game.js
+          node --check baduk/katago-evaluator.js
+          node --check baduk/katago/test-sequence-eval.mjs
+
+      - name: Test actual KataGo model and sequence evaluation
+        run: node baduk/katago/test-sequence-eval.mjs
