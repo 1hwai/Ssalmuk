@@ -535,9 +535,16 @@
   }
 
   let kataEvaluationRequest = 0;
+  let kataEvaluationRunning = false;
+  let kataEvaluationPending = false;
 
   async function refreshCharacterWithKataGo() {
     if (!window.SsalmukKataGo || !state || state.mode !== "ai") return;
+    if (kataEvaluationRunning) {
+      kataEvaluationPending = true;
+      return;
+    }
+    kataEvaluationRunning = true;
     const requestId = ++kataEvaluationRequest;
     const requestedState = state;
     const boardSnapshot = state.board.slice();
@@ -606,6 +613,12 @@
           evalStatus.dataset.status = "error";
         }
         console.warn("[Ssalmuk KataGo]", error);
+      }
+    } finally {
+      kataEvaluationRunning = false;
+      if (kataEvaluationPending) {
+        kataEvaluationPending = false;
+        if (state && state.mode === "ai") refreshCharacterWithKataGo();
       }
     }
   }
