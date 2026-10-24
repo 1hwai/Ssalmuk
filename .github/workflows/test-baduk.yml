@@ -10,6 +10,7 @@ on:
       - "baduk/katago/kataeval.js"
       - "baduk/katago/kataeval.wasm"
       - "baduk/katago/model.bin.gz"
+      - "scripts/build.mjs"
       - ".github/workflows/test-baduk.yml"
   workflow_dispatch:
 
@@ -33,3 +34,16 @@ jobs:
 
       - name: Test actual KataGo model and sequence evaluation
         run: node baduk/katago/test-sequence-eval.mjs
+
+      - name: Verify Cloudflare Pages build excludes oversized model
+        run: |
+          set -euxo pipefail
+          npm ci
+          npm run build
+          test -f dist/baduk/katago/kataeval.js
+          test -f dist/baduk/katago/kataeval.wasm
+          test ! -e dist/baduk/katago/model.bin.gz
+          if find dist -type f -size +25M -print -quit | grep -q .; then
+            echo "Cloudflare Pages asset exceeds 25 MiB" >&2
+            exit 1
+          fi
