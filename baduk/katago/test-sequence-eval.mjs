@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const createKata = require("./kataeval.js");
@@ -11,9 +12,7 @@ const fail = message => {
 
 try {
   module.ccall("kgeSetForceCpu", null, ["number"], [1]);
-  const response = await fetch(new URL("./model.bin.gz", import.meta.url));
-  if (!response.ok) throw new Error("Could not read the bundled KataGo model: " + response.status);
-  module.FS.writeFile("/ssalmuk-model.bin.gz", new Uint8Array(await response.arrayBuffer()));
+  module.FS.writeFile("/ssalmuk-model.bin.gz", new Uint8Array(readFileSync(new URL("./model.bin.gz", import.meta.url))));
   const loaded = await module.ccall("kgeLoad", "number", ["string", "number"],
     ["/ssalmuk-model.bin.gz", 19], { async: true });
   if (!loaded) throw new Error("kgeLoad: " + module.ccall("kgeError", "string", [], []));
@@ -57,6 +56,4 @@ try {
   }
 } catch (error) {
   fail(error.stack || error.message || String(error));
-} finally {
-  module._Exit ? module._Exit(0) : undefined;
 }
