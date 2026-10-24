@@ -75,6 +75,7 @@ jobs:
           test -s baduk/katago/kataeval.js
           test -s baduk/katago/kataeval.wasm
           test -s baduk/katago/model.bin.gz
+          node --check baduk/katago/test-sequence-eval.mjs
           node baduk/katago/test-sequence-eval.mjs
 
       - name: Commit built runtime
