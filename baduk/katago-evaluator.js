@@ -49,15 +49,22 @@
     return promise;
   }
 
-  function softmaxWinRates(logits) {
-    const max = Math.max(logits[0], logits[1], logits[2]);
-    const probs = logits.slice(0, 3).map(value => Math.exp(value - max));
-    const total = probs.reduce((sum, value) => sum + value, 0);
-    if (!Number.isFinite(total) || total <= 0) throw new Error("KataGo returned invalid win/loss logits.");
-    // The value head is {white win, white loss, no result}; split no-result evenly.
-    const white = (probs[0] + probs[2] * 0.5) / total;
-    const black = (probs[1] + probs[2] * 0.5) / total;
-    return { black, white };
+  function readWinRates(values) {
+    // kgeEvalSeq writes probabilities (not logits) to valueOut[0..2].
+    // Split the no-result probability evenly so Black + White totals 100%.
+    const whiteWin = values[0];
+    const whiteLoss = values[1];
+    const noResult = values[2];
+    if (![whiteWin, whiteLoss, noResult].every(Number.isFinite) ||
+        whiteWin < 0 || whiteLoss < 0 || noResult < 0) {
+      throw new Error("KataGo returned invalid win probabilities.");
+    }
+    const total = whiteWin + whiteLoss + noResult;
+    if (total <= 0) throw new Error("KataGo returned an empty win-probability distribution.");
+    return {
+      black: (whiteLoss + noResult * 0.5) / total,
+      white: (whiteWin + noResult * 0.5) / total
+    };
   }
 
   async function evaluate(board, size, rules, history, toMove) {
@@ -87,7 +94,7 @@
         { async: true });
       if (!ok) throw new Error("KataGo evaluation failed: " + module.ccall("kgeError", "string", [], ""));
       const values = module.HEAPF32.slice(valuePtr >> 2, (valuePtr >> 2) + 5);
-      const rates = softmaxWinRates(Array.from(values.slice(0, 3)));
+      const rates = readWinRates(Array.from(values.slice(0, 3)));
       const ownership = module.HEAPF32.slice(ownerPtr >> 2, (ownerPtr >> 2) + hw);
       // valueOut[4] is whiteLead (already accounts for komi); the app displays Black minus White.
       const whiteLead = values[4];
