@@ -1,0 +1,85 @@
+name: Build KataGo browser evaluator
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-katago.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: katago-runtime
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout Ssalmuk
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout KataGo WebGPU evaluator
+        uses: actions/checkout@v4
+        with:
+          repository: saigo-online/katago-webgpu
+          ref: main
+          path: katago-upstream
+          submodules: recursive
+
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.10
+          actions-cache-folder: emsdk-cache
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build zlib1g-dev libeigen3-dev
+          emcc --version
+
+      - name: Build KataGo WASM evaluator
+        working-directory: katago-upstream
+        env:
+          EMSDK_DIR: ${{ env.EMSDK }}
+          B18_NET: /tmp/katago-model.bin.gz
+        run: |
+          set -euxo pipefail
+          curl -fL --retry 3 \
+            https://media.katagotraining.org/uploaded/networks/models/kata1/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz \
+            -o /tmp/katago-model.bin.gz
+          test -s /tmp/katago-model.bin.gz
+          bash scripts/build-eval.sh
+          test -s web/demo/kataeval.js
+          test -s web/demo/kataeval.wasm
+
+      - name: Install runtime files
+        run: |
+          set -euxo pipefail
+          mkdir -p baduk/katago
+          cp katago-upstream/web/demo/kataeval.js baduk/katago/kataeval.js
+          cp katago-upstream/web/demo/kataeval.wasm baduk/katago/kataeval.wasm
+          cp /tmp/katago-model.bin.gz baduk/katago/model.bin.gz
+          test -s baduk/katago/kataeval.js
+          test -s baduk/katago/kataeval.wasm
+          test -s baduk/katago/model.bin.gz
+          printf 'KataGo runtime built at %s\n' "$(date -u +%FT%TZ)" > baduk/katago/BUILD_INFO.txt
+
+      - name: Commit built runtime
+        run: |
+          set -euxo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baduk/katago/kataeval.js baduk/katago/kataeval.wasm baduk/katago/model.bin.gz baduk/katago/BUILD_INFO.txt
+          if git diff --cached --quiet; then
+            echo "KataGo runtime is already up to date"
+            exit 0
+          fi
+          git commit -m "Build and deploy KataGo browser evaluator"
+          git push
