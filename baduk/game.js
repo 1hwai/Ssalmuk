@@ -659,6 +659,11 @@
     const rules = $("scoring-rules").value;
     const characterId = mode === "ai" ? $("ai-character").value : null;
     state = freshState(size, mode, humanColor, difficulty, rules, characterId);
+    const evalStatus = $("opponent-evaluation");
+    if (evalStatus) {
+      delete evalStatus.dataset.status;
+      evalStatus.textContent = "KataGo 분석 대기 · 첫 착수 후 승률과 예상 형세를 표시합니다.";
+    }
     state.positionEval = evaluatePosition();
     if (mode === "ai" && CHARACTERS[characterId]) {
       state.dialogueLine = pickDialogue(CHARACTERS[characterId], "start");
