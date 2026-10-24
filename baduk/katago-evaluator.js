@@ -89,18 +89,51 @@
         { async: true });
       if (!ok) throw new Error("KataGo evaluation failed: " + module.ccall("kgeError", "string", [], ""));
       const values = module.HEAPF32.slice(valuePtr >> 2, (valuePtr >> 2) + 5);
-      const rates = readWinRates(Array.from(values.slice(0, 3)));
+      const networkRates = readWinRates(Array.from(values.slice(0, 3)));
       const ownership = module.HEAPF32.slice(ownerPtr >> 2, (ownerPtr >> 2) + hw);
+
+      // Run a small KataGo-style PUCT search as well as the direct value-head eval.
+      // The search win rate is the primary character signal; the value head supplies score lead.
+      const bestMovePtr = module._malloc(4);
+      const searchWinPtr = module._malloc(4);
+      const pvPtr = module._malloc(8 * 4);
+      const pvLenPtr = module._malloc(4);
+      const visitsPtr = module._malloc(4);
+      let searchWinRate;
+      let visits;
+      try {
+        const searched = await module.ccall("kgeSearch", "number",
+          Array(13).fill("number"),
+          [movesPtr, colorsPtr, moves.length, pla, KOMI[rules] ?? 6.5,
+            32, 650, bestMovePtr, searchWinPtr, pvPtr, 8, pvLenPtr, visitsPtr],
+          { async: true });
+        if (!searched) throw new Error("KataGo search failed: " + module.ccall("kgeError", "string", [], ""));
+        searchWinRate = module.HEAPF32[searchWinPtr >> 2];
+        visits = module.HEAP32[visitsPtr >> 2];
+      } finally {
+        module._free(bestMovePtr);
+        module._free(searchWinPtr);
+        module._free(pvPtr);
+        module._free(pvLenPtr);
+        module._free(visitsPtr);
+      }
+
+      const blackWinRate = pla === 1 ? searchWinRate : 1 - searchWinRate;
+      const whiteWinRate = 1 - blackWinRate;
       // valueOut[4] is whiteLead (already accounts for komi); the app displays Black minus White.
       const whiteLead = values[4];
-      if (!Number.isFinite(whiteLead) || !Number.isFinite(rates.black) || !Number.isFinite(rates.white)) {
-        throw new Error("KataGo returned non-finite position values.");
+      if (!Number.isFinite(whiteLead) || !Number.isFinite(blackWinRate) ||
+          blackWinRate < 0 || blackWinRate > 1 || visits < 1) {
+        throw new Error("KataGo returned invalid search/evaluation values.");
       }
       return {
         blackLead: -whiteLead,
         whiteLead,
-        blackWinRate: rates.black,
-        whiteWinRate: rates.white,
+        blackWinRate,
+        whiteWinRate,
+        networkBlackWinRate: networkRates.black,
+        networkWhiteWinRate: networkRates.white,
+        visits,
         ownership,
         modelVersion: module.ccall("kgeModelVersion", "number", [], [])
       };
