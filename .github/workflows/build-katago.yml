@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/build-katago.yml"
+      - "baduk/game.js"
 
 permissions:
   contents: write
@@ -56,6 +57,8 @@ jobs:
           test -s /tmp/katago-model.bin.gz
           # EmdawnWebGPU requires the final C++ link to use em++ (upstream script uses emcc).
           sed -i 's/^emcc "${OBJS\[@\]}"/em++ "${OBJS[@]}"/' scripts/build-eval.sh
+          # Optional upstream demo nets may be absent; don't let their absence fail the build.
+          sed -i 's/^bundle() { \[ -f "\$1" \] \&\& { cp "\$1" "\$ROOT\/web\/demo\/\$2"; echo "==> bundled $(basename "\$1") -> web\/demo\/\$2"; }; }/bundle() { if [ -f "$1" ]; then cp "$1" "$ROOT\/web\/demo\/$2"; echo "==> bundled $(basename "$1") -> web\/demo\/$2"; fi; }/' scripts/build-eval.sh
           grep -F 'em++ "${OBJS[@]}"' scripts/build-eval.sh
           bash scripts/build-eval.sh
           test -s web/demo/kataeval.js
