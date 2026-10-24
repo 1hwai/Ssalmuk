@@ -492,54 +492,74 @@
     else state.emotion = "냉철";
 
     state.dialogueLine = pickDialogue(character, category);
-    refreshCharacterWithKataGo(moverColor, currentEval);
+    refreshCharacterWithKataGo();
   }
 
   let kataEvaluationRequest = 0;
 
-  async function refreshCharacterWithKataGo(moverColor, previousEval) {
+  async function refreshCharacterWithKataGo() {
     if (!window.SsalmukKataGo || !state || state.mode !== "ai") return;
     const requestId = ++kataEvaluationRequest;
     const requestedState = state;
     const boardSnapshot = state.board.slice();
+    const historySnapshot = state.neuralHistory.map(action => ({ ...action }));
     const key = boardKey(boardSnapshot);
+    const size = state.size;
+    const rules = state.rules;
+    const toMove = state.turn;
     try {
-      const result = await window.SsalmukKataGo.evaluate(boardSnapshot, state.size, state.rules);
+      const result = await window.SsalmukKataGo.evaluate(boardSnapshot, size, rules, historySnapshot, toMove);
       if (requestId !== kataEvaluationRequest || state !== requestedState ||
           state.mode !== "ai" || boardKey(state.board) !== key) return;
       const character = CHARACTERS[state.characterId];
       if (!character) return;
-      // KataGo reports expected score from White's perspective; our app uses Black minus White.
-      const currentEval = -result.whiteScore;
-      const oldAdvantage = previousEval * character.color;
-      const newAdvantage = currentEval * character.color;
-      const swing = newAdvantage - oldAdvantage;
+
+      const currentEval = result.blackLead;
+      const perspectiveWinRate = character.color === BLACK ? result.blackWinRate : result.whiteWinRate;
+      const previousLead = state.kataGoEval?.blackLead;
+      const swing = Number.isFinite(previousLead) ? (currentEval - previousLead) * character.color : 0;
       state.positionEval = currentEval;
       state.kataGoEval = {
-        blackLead: currentEval,
-        whiteLead: result.whiteScore,
+        blackLead: result.blackLead,
+        whiteLead: result.whiteLead,
+        blackWinRate: result.blackWinRate,
+        whiteWinRate: result.whiteWinRate,
         modelVersion: result.modelVersion
       };
 
       let category = "normal";
-      const threshold = Math.max(1.5, state.size * 0.16);
       if (state.finished) category = "result";
-      else if (newAdvantage < -threshold) category = "unfavorable";
-      else if (newAdvantage > threshold) category = "favorable";
+      else if (perspectiveWinRate < 0.42) category = "unfavorable";
+      else if (perspectiveWinRate > 0.58) category = "favorable";
 
-      if (category === "opponentGoodMove") state.emotion = "수줍음";
-      else if (category === "opponentMistake") state.emotion = "기쁨";
-      else if (newAdvantage > Math.max(2, state.size * 0.2)) state.emotion = "기쁨";
-      else if (newAdvantage < -Math.max(2, state.size * 0.2)) state.emotion = Math.abs(swing) >= Math.max(2.5, state.size * 0.25) ? "화남" : "냉랭";
+      if (category === "unfavorable") state.emotion = swing < -0.06 ? "화남" : "냉랭";
+      else if (category === "favorable") state.emotion = swing > 0.06 ? "기쁨" : "냉철";
       else state.emotion = "냉철";
       state.dialogueLine = pickDialogue(character, category);
-      gameHint.textContent = "KataGo 형세 분석 · 흑 기준 " +
-        (currentEval >= 0 ? "+" : "") + currentEval.toFixed(1) + "집 예상";
+
+      const blackLeadText = (result.blackLead >= 0 ? "+" : "") + result.blackLead.toFixed(1) + "집";
+      const blackWinText = (result.blackWinRate * 100).toFixed(1) + "%";
+      const whiteWinText = (result.whiteWinRate * 100).toFixed(1) + "%";
+      const bandText = category === "unfavorable" ? "캐릭터 불리" :
+        category === "favorable" ? "캐릭터 유리" : category === "result" ? "대국 종료" : "무난";
+      const evalStatus = $("opponent-evaluation");
+      if (evalStatus) {
+        evalStatus.textContent = "KataGo · 흑 승률 " + blackWinText +
+          " / 백 승률 " + whiteWinText + " · 예상 형세 흑 " + blackLeadText +
+          " · " + bandText + " · 모델 v" + result.modelVersion;
+        evalStatus.dataset.status = category;
+      }
+      gameHint.textContent = "KataGo 형세 분석 · 흑 승률 " + blackWinText +
+        " · 흑 기준 예상 형세 " + blackLeadText;
       render();
     } catch (error) {
-      // Keep the existing local estimate active if the optional WASM/model bundle isn't deployed.
       if (requestId === kataEvaluationRequest && state === requestedState) {
-        console.warn("[Ssalmuk KataGo] " + (error.message || error));
+        const evalStatus = $("opponent-evaluation");
+        if (evalStatus) {
+          evalStatus.textContent = "KataGo 분석 실패 · " + (error.message || String(error));
+          evalStatus.dataset.status = "error";
+        }
+        console.warn("[Ssalmuk KataGo]", error);
       }
     }
   }
@@ -567,7 +587,6 @@
       }
     }
 
-    const previousEval = state.positionEval ?? evaluatePosition(state.board);
     saveUndoPoint();
     state.neuralHistory.push({ x: index % state.size, y: Math.floor(index / state.size), color });
     state.board = move.board;
@@ -578,7 +597,7 @@
     state.lastMove = index;
     state.seen.add(key);
     state.aiThinking = false;
-    updateCharacterReaction(previousEval, color);
+    updateCharacterReaction(state.positionEval ?? evaluatePosition(), color);
     render();
     maybeStartAI();
     return true;
@@ -621,6 +640,7 @@
     state.positionEval = evaluatePosition();
     if (mode === "ai" && CHARACTERS[characterId]) {
       state.dialogueLine = pickDialogue(CHARACTERS[characterId], "start");
+      state.kataGoEval = null;
     }
     setupScreen.hidden = true;
     gameScreen.hidden = false;
@@ -679,6 +699,10 @@
     $("opponent-description").textContent = (character.color === BLACK ? "흑돌" : "백돌") + " · " + character.gender;
     $("opponent-emotion").textContent = state.emotion || character.emotion;
     $("opponent-line").textContent = state.dialogueLine || pickDialogue(character, "start");
+    const evalStatus = $("opponent-evaluation");
+    if (evalStatus && !state.kataGoEval && !evalStatus.dataset.status) {
+      evalStatus.textContent = "KataGo 분석 대기 · 첫 착수 후 승률과 예상 형세를 표시합니다.";
+    }
   }
 
   function updateCharacterOptions() {
