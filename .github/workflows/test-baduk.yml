@@ -6,6 +6,7 @@ on:
     paths:
       - "baduk/game.js"
       - "baduk/katago-evaluator.js"
+      - "baduk/katago-worker.js"
       - "baduk/katago/test-sequence-eval.mjs"
       - "baduk/katago/kataeval.js"
       - "baduk/katago/kataeval.wasm"
@@ -30,6 +31,7 @@ jobs:
           set -euxo pipefail
           node --check baduk/game.js
           node --check baduk/katago-evaluator.js
+          node --check baduk/katago-worker.js
           node --check baduk/katago/test-sequence-eval.mjs
 
       - name: Test actual KataGo model and sequence evaluation
