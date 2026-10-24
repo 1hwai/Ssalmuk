@@ -53,10 +53,38 @@ try {
         blackWinRate < 0 || blackWinRate > 1 || whiteWinRate < 0 || whiteWinRate > 1) {
       throw new Error("KataGo win-rate conversion failed.");
     }
-    console.log("PASS: KataGo WASM loaded model v" +
-      module.ccall("kgeModelVersion", "number", [], []) +
-      ", replayed one move, and returned Black " + (blackWinRate * 100).toFixed(1) +
-      "% / White " + (whiteWinRate * 100).toFixed(1) + "% with finite score values.");
+
+    const bestPtr = module._malloc(4);
+    const searchRatePtr = module._malloc(4);
+    const pvPtr = module._malloc(8 * 4);
+    const pvLenPtr = module._malloc(4);
+    const visitsPtr = module._malloc(4);
+    let searchedWhiteWinRate;
+    let visits;
+    try {
+      const searched = await module.ccall("kgeSearch", "number", Array(13).fill("number"),
+        [movesPtr, colorsPtr, 1, 2, 6.5, 16, 300, bestPtr, searchRatePtr, pvPtr, 8, pvLenPtr, visitsPtr],
+        { async: true });
+      if (!searched) throw new Error("kgeSearch: " + module.ccall("kgeError", "string", [], []));
+      searchedWhiteWinRate = module.HEAPF32[searchRatePtr >> 2];
+      visits = module.HEAP32[visitsPtr >> 2];
+      if (!Number.isFinite(searchedWhiteWinRate) ||
+          searchedWhiteWinRate < 0 || searchedWhiteWinRate > 1 || visits < 1) {
+        throw new Error("KataGo PUCT search returned invalid win rate or visit count.");
+      }
+    } finally {
+      module._free(bestPtr);
+      module._free(searchRatePtr);
+      module._free(pvPtr);
+      module._free(pvLenPtr);
+      module._free(visitsPtr);
+    }
+
+    console.log("PASS: KataGo WASM v" + module.ccall("kgeModelVersion", "number", [], []) +
+      " replayed one move; NN Black " + (blackWinRate * 100).toFixed(1) +
+      "% / White " + (whiteWinRate * 100).toFixed(1) + "%; PUCT White " +
+      (searchedWhiteWinRate * 100).toFixed(1) + "% across " + visits +
+      " visits; score values finite.");
   } finally {
     module._free(movesPtr);
     module._free(colorsPtr);
