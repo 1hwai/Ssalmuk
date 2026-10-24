@@ -20,6 +20,12 @@ const excludedFiles = new Set([
   "LICENSE.md"
 ]);
 
+// Cloudflare Pages rejects individual assets larger than 25 MiB.
+// The 93 MiB KataGo model is fetched directly from GitHub at runtime instead.
+const excludedPaths = new Set([
+  "baduk/katago/model.bin.gz"
+]);
+
 async function copySite(source, destination, relative = "") {
   await mkdir(destination, { recursive: true });
   const entries = await readdir(source, { withFileTypes: true });
@@ -36,7 +42,7 @@ async function copySite(source, destination, relative = "") {
       continue;
     }
 
-    if (!entry.isFile() || excludedFiles.has(entry.name) || entry.name.endsWith(".md")) continue;
+    if (!entry.isFile() || excludedFiles.has(entry.name) || excludedPaths.has(childRelative) || entry.name.endsWith(".md")) continue;
     await cp(sourcePath, destinationPath);
   }
 }
