@@ -49,21 +49,16 @@
     return promise;
   }
 
-  function readWinRates(values) {
-    // kgeEvalSeq writes probabilities (not logits) to valueOut[0..2].
-    // Split the no-result probability evenly so Black + White totals 100%.
-    const whiteWin = values[0];
-    const whiteLoss = values[1];
-    const noResult = values[2];
-    if (![whiteWin, whiteLoss, noResult].every(Number.isFinite) ||
-        whiteWin < 0 || whiteLoss < 0 || noResult < 0) {
-      throw new Error("KataGo returned invalid win probabilities.");
-    }
-    const total = whiteWin + whiteLoss + noResult;
-    if (total <= 0) throw new Error("KataGo returned an empty win-probability distribution.");
+  function readWinRates(logits) {
+    // The upstream kataeval C API exposes the value head as raw win/loss/no-result logits.
+    const max = Math.max(logits[0], logits[1], logits[2]);
+    const weights = logits.slice(0, 3).map(value => Math.exp(value - max));
+    const total = weights.reduce((sum, value) => sum + value, 0);
+    if (!Number.isFinite(total) || total <= 0) throw new Error("KataGo returned invalid win/loss logits.");
+    // Split no-result evenly so the displayed Black and White win rates sum to 100%.
     return {
-      black: (whiteLoss + noResult * 0.5) / total,
-      white: (whiteWin + noResult * 0.5) / total
+      black: (weights[1] + weights[2] * 0.5) / total,
+      white: (weights[0] + weights[2] * 0.5) / total
     };
   }
 
