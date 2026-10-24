@@ -48,6 +48,8 @@ jobs:
           B18_NET: /tmp/katago-model.bin.gz
         run: |
           set -euxo pipefail
+          export EMSDK_DIR="$EMSDK"
+          test -f "$EMSDK_DIR/emsdk_env.sh"
           curl -fL --retry 3 \
             https://media.katagotraining.org/uploaded/networks/models/kata1/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz \
             -o /tmp/katago-model.bin.gz
