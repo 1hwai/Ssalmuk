@@ -62,6 +62,8 @@ jobs:
           bash scripts/build-eval.sh
           test -s web/demo/kataeval.js
           test -s web/demo/kataeval.wasm
+          # Exercise the generated WASM and the real b18 KataGo model, not just compilation.
+          node web/test-eval.mjs web/demo/model-b18c384nbt.bin.gz
 
       - name: Install runtime files
         run: |
