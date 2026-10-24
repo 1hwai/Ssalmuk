@@ -38,7 +38,7 @@ jobs:
       - name: Verify Cloudflare Pages build excludes oversized model
         run: |
           set -euxo pipefail
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
           test -f dist/baduk/katago/kataeval.js
           test -f dist/baduk/katago/kataeval.wasm
