@@ -107,7 +107,7 @@
         const searched = await module.ccall("kgeSearch", "number",
           Array(13).fill("number"),
           [movesPtr, colorsPtr, moves.length, pla, KOMI[rules] ?? 6.5,
-            32, 650, bestMovePtr, searchWinPtr, pvPtr, 8, pvLenPtr, visitsPtr],
+            12, 250, bestMovePtr, searchWinPtr, pvPtr, 8, pvLenPtr, visitsPtr],
           { async: true });
         if (!searched) throw new Error("KataGo search failed: " + module.ccall("kgeError", "string", [], ""));
         searchWinRate = module.HEAPF32[searchWinPtr >> 2];
