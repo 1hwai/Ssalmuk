@@ -501,12 +501,19 @@
     if (!state || state.mode !== "ai") return;
     const character = CHARACTERS[state.characterId];
     if (!character) return;
-    const perspective = character.color;
     const currentEval = evaluatePosition();
+    state.positionEval = currentEval;
+    // In AI mode, don't emit a heuristic reaction first and then replace it.
+    // Wait for KataGo's result so the displayed emotion/dialogue matches the status.
+    if (window.SsalmukKataGo) {
+      refreshCharacterWithKataGo();
+      return;
+    }
+
+    const perspective = character.color;
     const oldAdvantage = previousEval * perspective;
     const newAdvantage = currentEval * perspective;
     const swing = newAdvantage - oldAdvantage;
-    state.positionEval = currentEval;
 
     let category = "normal";
     const threshold = Math.max(1.5, state.size * 0.16);
@@ -525,7 +532,6 @@
     else state.emotion = "냉철";
 
     state.dialogueLine = pickDialogue(character, category);
-    refreshCharacterWithKataGo();
   }
 
   let kataEvaluationRequest = 0;
