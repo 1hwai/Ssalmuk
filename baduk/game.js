@@ -449,6 +449,56 @@
     else state.emotion = "냉철";
 
     state.dialogueLine = pickDialogue(character, category);
+    refreshCharacterWithKataGo(moverColor, currentEval);
+  }
+
+  let kataEvaluationRequest = 0;
+
+  async function refreshCharacterWithKataGo(moverColor, previousEval) {
+    if (!window.SsalmukKataGo || !state || state.mode !== "ai") return;
+    const requestId = ++kataEvaluationRequest;
+    const requestedState = state;
+    const boardSnapshot = state.board.slice();
+    const key = boardKey(boardSnapshot);
+    try {
+      const result = await window.SsalmukKataGo.evaluate(boardSnapshot, state.size, state.rules);
+      if (requestId !== kataEvaluationRequest || state !== requestedState ||
+          state.mode !== "ai" || boardKey(state.board) !== key) return;
+      const character = CHARACTERS[state.characterId];
+      if (!character) return;
+      // KataGo reports expected score from White's perspective; our app uses Black minus White.
+      const currentEval = -result.whiteScore;
+      const oldAdvantage = previousEval * character.color;
+      const newAdvantage = currentEval * character.color;
+      const swing = newAdvantage - oldAdvantage;
+      state.positionEval = currentEval;
+      state.kataGoEval = {
+        blackLead: currentEval,
+        whiteLead: result.whiteScore,
+        modelVersion: result.modelVersion
+      };
+
+      let category = "normal";
+      const threshold = Math.max(1.5, state.size * 0.16);
+      if (state.finished) category = "result";
+      else if (moverColor !== character.color && swing <= -threshold) category = "opponentGoodMove";
+      else if (moverColor !== character.color && swing >= threshold) category = "opponentMistake";
+
+      if (category === "opponentGoodMove") state.emotion = "수줍음";
+      else if (category === "opponentMistake") state.emotion = "기쁨";
+      else if (newAdvantage > Math.max(2, state.size * 0.2)) state.emotion = "기쁨";
+      else if (newAdvantage < -Math.max(2, state.size * 0.2)) state.emotion = Math.abs(swing) >= Math.max(2.5, state.size * 0.25) ? "화남" : "냉랭";
+      else state.emotion = "냉철";
+      state.dialogueLine = pickDialogue(character, category);
+      gameHint.textContent = "KataGo 형세 분석 · 흑 기준 " +
+        (currentEval >= 0 ? "+" : "") + currentEval.toFixed(1) + "집 예상";
+      render();
+    } catch (error) {
+      // Keep the existing local estimate active if the optional WASM/model bundle isn't deployed.
+      if (requestId === kataEvaluationRequest && state === requestedState) {
+        console.warn("[Ssalmuk KataGo] " + (error.message || error));
+      }
+    }
   }
 
   function tryPlay(index, color = state.turn, fromAI = false) {
