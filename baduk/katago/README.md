@@ -26,4 +26,8 @@ For a model file, use one of the compatible network files described by the upstr
 
 ## Fallback and verification
 
-Until all three runtime files are deployed, the game continues to use its local lightweight position estimate and logs the KataGo load error in the browser console. Once deployed, after a move the character's displayed estimate is updated from KataGo's expected score. Check the browser console and the hint text beginning `KataGo 형세 분석` to verify that the runtime is actually active.
+The runtime files are built and committed by `.github/workflows/build-katago.yml`. The workflow checks both the compiled WASM with the real b18 model and the sequence-aware `kgeEvalSeq` API with a one-move test position.
+
+After each legal move in AI mode, the adapter replays the complete move history (including passes) through KataGo so captures and recent-move input features are preserved. The adapter reads the win/loss/no-result logits, converts them to normalized Black/White win probabilities, and uses KataGo's `whiteLead` output for the expected lead. The existing TF.js engine still chooses moves; this evaluator only drives the character's emotion and dialogue.
+
+Below the character dialogue, the game displays KataGo's Black/White win rates, expected Black lead in points, the selected position band (unfavorable / normal / favorable), and model version. While evaluation is running it shows an analysis-in-progress status; on failure it shows the error instead of silently presenting a local heuristic as KataGo output. The game hint repeats the current KataGo estimate for quick checking.
