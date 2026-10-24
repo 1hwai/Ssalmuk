@@ -76,20 +76,19 @@ jobs:
           test -s baduk/katago/kataeval.wasm
           test -s baduk/katago/model.bin.gz
           node baduk/katago/test-sequence-eval.mjs
-          printf 'KataGo runtime built at %s\n' "$(date -u +%FT%TZ)" > baduk/katago/BUILD_INFO.txt
 
       - name: Commit built runtime
         run: |
           set -euxo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baduk/katago/kataeval.js baduk/katago/kataeval.wasm baduk/katago/model.bin.gz baduk/katago/BUILD_INFO.txt
+          git add baduk/katago/kataeval.js baduk/katago/kataeval.wasm baduk/katago/model.bin.gz
           if git diff --cached --quiet; then
             echo "KataGo runtime is already up to date"
             exit 0
           fi
           git commit -m "Build and deploy KataGo browser evaluator"
           # The repository may receive UI commits while the model is compiling.
-          # Rebase the generated runtime commit on the latest main before pushing.
+          # Rebase generated binaries on the latest main before pushing.
           git pull --rebase origin main
           git push
